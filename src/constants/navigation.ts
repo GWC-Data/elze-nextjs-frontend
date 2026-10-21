@@ -1,0 +1,190 @@
+import type { LucideIcon } from 'lucide-react'
+import {
+  Activity,
+  Bot,
+  BookOpen,
+  BrainCircuit,
+  Building2,
+  CircleCheck,
+  FilePen,
+  Database,
+  KeyRound,
+  LayoutDashboard,
+  Layers,
+  Home,
+  Network,
+  History,
+  Settings,
+  ShieldCheck,
+  SlidersHorizontal,
+  UserCircle,
+  Users,
+  UsersRound,
+} from 'lucide-react'
+import type { AppPaths } from '@/router/paths'
+
+import type { RoleName } from '@/types/auth'
+
+export interface NavItem {
+  label: string
+  path: string
+  icon: LucideIcon
+  permission?: string
+  exact?: boolean
+  children?: NavItem[]
+}
+
+export interface NavGroup {
+  title: string | null
+  items: NavItem[]
+}
+
+function allowed(items: NavItem[], can: (permission: string) => boolean): NavItem[] {
+  return items
+    .filter((item) => !item.permission || can(item.permission))
+    .map((item) => (item.children ? { ...item, children: allowed(item.children, can) } : item))
+}
+
+function visible(groups: NavGroup[], can: (permission: string) => boolean): NavGroup[] {
+  return groups
+    .map((group) => ({ ...group, items: allowed(group.items, can) }))
+    .filter((group) => group.items.length > 0)
+}
+
+function lakehouse(paths: AppPaths): NavItem {
+  return {
+    label: 'Metadata Lakehouse',
+    path: paths.metadataLakehouse,
+    icon: Layers,
+    permission: 'context.read',
+    children: [
+      { label: 'Drafts', path: paths.metadataLakehouseDrafts, icon: FilePen, permission: 'context.read' },
+      { label: 'Published', path: paths.metadataLakehousePublished, icon: CircleCheck, permission: 'context.read' },
+    ],
+  }
+}
+
+function platformGroups(paths: AppPaths): NavGroup[] {
+  return [
+    {
+      title: null,
+      items: [
+        { label: 'Overview', path: paths.overview, icon: Home, exact: true },
+        { label: 'Architecture', path: paths.architecture, icon: Network },
+      ],
+    },
+    {
+      title: 'Intelligence',
+      items: [
+        lakehouse(paths),
+        { label: 'Data analyst', path: paths.dataAnalyst(), icon: Bot, permission: 'analyst.use' },
+        { label: 'Playbooks', path: paths.playbooks(), icon: BookOpen, permission: 'playbook.read' },
+        { label: 'Nexus Playbooks', path: paths.nexusPlaybooks, icon: BookOpen },
+        { label: 'Agents', path: paths.agentLibrary, icon: BrainCircuit, permission: 'agent.read' },
+      ],
+    },
+    {
+      title: 'Product',
+      items: [
+        { label: 'Dashboards', path: paths.dashboards, icon: LayoutDashboard, permission: 'dashboard.read' },
+        { label: 'Data sources', path: paths.data, icon: Database, permission: 'data.read' },
+      ],
+    },
+    {
+      title: 'Customers',
+      items: [
+        { label: 'Companies', path: paths.companies!, icon: Building2, permission: 'company.read' },
+        { label: 'Users', path: paths.users, icon: Users, permission: 'user.read' },
+      ],
+    },
+    {
+      title: 'Access',
+      items: [
+        { label: 'Roles', path: paths.roles!, icon: ShieldCheck, permission: 'role.read' },
+        { label: 'Groups', path: paths.groups, icon: UsersRound, permission: 'group.read' },
+      ],
+    },
+    {
+      title: 'System',
+      items: [
+        { label: 'Audit log', path: paths.audit, icon: Activity },
+      ],
+    },
+  ]
+}
+
+function workspaceGroups(paths: AppPaths, role?: RoleName): NavGroup[] {
+  return [
+    {
+      title: null,
+      items: [
+        { label: 'Overview', path: paths.overview, icon: Home, exact: true },
+        { label: 'Architecture', path: paths.architecture, icon: Network },
+      ],
+    },
+    {
+      title: 'Intelligence',
+      items: [
+        lakehouse(paths),
+        { label: 'Data analyst', path: paths.dataAnalyst(), icon: Bot, permission: 'analyst.use' },
+        { label: 'Playbooks', path: paths.playbooks(), icon: BookOpen, permission: 'playbook.read' },
+        { label: 'Nexus Playbooks', path: paths.nexusPlaybooks, icon: BookOpen },
+        { label: 'Agents', path: paths.agentLibrary, icon: BrainCircuit, permission: 'agent.read' },
+      ],
+    },
+    {
+      title: 'Analytics',
+      items: [
+        { label: 'Dashboards', path: paths.dashboards, icon: LayoutDashboard, permission: 'dashboard.read' },
+        { label: 'Data sources', path: paths.data, icon: Database, permission: 'data.read' },
+      ],
+    },
+    {
+      title: 'Team',
+      items: [
+        { label: 'Members', path: paths.users, icon: Users, permission: 'user.read' },
+        { label: 'Roles', path: paths.roles!, icon: ShieldCheck, permission: 'role.read' },
+        { label: 'Groups', path: paths.groups, icon: UsersRound, permission: 'group.read' },
+        { label: 'Dashboard access', path: paths.access!, icon: KeyRound, permission: 'access.read' },
+      ],
+    },
+    {
+      title: 'Activity',
+      items: [
+        { label: role === 'COMPANY_ADMIN' ? 'Audit log' : 'My activity', path: paths.audit, icon: History },
+      ],
+    },
+  ]
+}
+
+export function accountMenuFor(paths: AppPaths, can: (permission: string) => boolean): NavItem[] {
+  const items: NavItem[] =
+    paths.shell === 'platform'
+      ? [
+          { label: 'Settings', path: paths.settings, icon: Settings },
+          { label: 'Your account', path: paths.profile, icon: UserCircle },
+        ]
+      : [
+          {
+            label: 'Company settings',
+            path: paths.companySettings!,
+            icon: SlidersHorizontal,
+            permission: 'company.read',
+          },
+          { label: 'Your account', path: paths.profile, icon: UserCircle },
+        ]
+  return items.filter((item) => item.path && (!item.permission || can(item.permission)))
+}
+
+export function navigationFor(
+  paths: AppPaths,
+  can: (permission: string) => boolean,
+  role?: RoleName
+): NavGroup[] {
+  return visible(paths.shell === 'platform' ? platformGroups(paths) : workspaceGroups(paths, role), can)
+}
+
+export function isNavItemActive(item: NavItem, pathname: string): boolean {
+  if (item.exact) return pathname === item.path
+  return pathname === item.path || pathname.startsWith(`${item.path}/`)
+}
