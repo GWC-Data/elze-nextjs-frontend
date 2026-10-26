@@ -19,7 +19,7 @@ export default function ChangePasswordForm({
   onCancel?: () => void
   cancelLabel?: string
 }) {
-  const { adoptSession, refresh } = useAuth()
+  const { adoptSession } = useAuth()
 
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
@@ -39,9 +39,8 @@ export default function ChangePasswordForm({
     setError(null)
     setPending(true)
     try {
-      const session = await changePassword(current, next)
-      adoptSession(session)
-      await refresh()
+      await changePassword(current, next)
+      adoptSession()
       notify.success('Your password has been changed.', 'Every other session has been signed out.')
       onDone()
     } catch (err) {

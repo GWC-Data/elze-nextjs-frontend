@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { Eye, RefreshCw, X } from 'lucide-react'
 import { fetchAuditLogs } from '@/api/audit.api'

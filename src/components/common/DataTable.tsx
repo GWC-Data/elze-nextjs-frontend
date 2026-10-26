@@ -37,6 +37,7 @@ interface DataTableProps<T> {
 
   searchFilter?: (item: T, query: string) => boolean
   searchPlaceholder?: string
+  searchClassName?: string
 
   empty: { title: string; body?: ReactNode; action?: ReactNode }
 
@@ -61,6 +62,7 @@ export function DataTable<T>({
   onRetry,
   searchFilter,
   searchPlaceholder = 'Search…',
+  searchClassName,
   empty,
   toolbar,
   onRowClick,
@@ -177,6 +179,7 @@ export function DataTable<T>({
                   if (!server) setClientPage(1)
                 }}
                 placeholder={searchPlaceholder}
+                className={searchClassName}
               />
             ) : null
           }

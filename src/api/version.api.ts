@@ -1,4 +1,5 @@
-import { contextHttp } from '@/api/client'
+import { contextHttp, deleteConfig } from '@/api/client'
+import type { DeleteOptions } from '@/api/client'
 import { endpoints, versionParams } from '@/api/endpoints'
 import type {
   ContextVersion,
@@ -25,9 +26,10 @@ export function createVersion(connectionId: string): Promise<ContextVersionState
 
 export function deleteVersion(
   connectionId: string,
-  versionId: string
-): Promise<{ deleted: { id: string; name: string; version: number; label: string } }> {
-  return contextHttp.delete(endpoints.context.version(connectionId, versionId))
+  versionId: string,
+  options?: DeleteOptions
+): Promise<{ deleted: { id: string; name: string; version: number; label: string }; permanent: boolean }> {
+  return contextHttp.delete(endpoints.context.version(connectionId, versionId), deleteConfig(options))
 }
 
 export interface StoredExtraction {

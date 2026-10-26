@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useState } from 'react'
 import { Clock, RefreshCw, Share2, ShieldCheck, Trash2 } from 'lucide-react'
 import { useNavigate, useParams } from '@/lib/router'

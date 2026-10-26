@@ -1,3 +1,5 @@
+'use client'
+
 import * as React from "react"
 import { useParams } from "@/lib/router"
 import { Database } from "lucide-react"

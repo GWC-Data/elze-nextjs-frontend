@@ -26,19 +26,20 @@ export interface AppPaths {
   libraryAgentEdit(agentId?: string): string
 
   readonly users: string
-  user(userId: number | string): string
+  user(userId: string): string
   readonly groups: string
 
   readonly access: string | null
   readonly roles: string | null
 
   readonly companies: string | null
-  company(companyId: number | string): string | null
+  company(companyId: string): string | null
 
   readonly audit: string
   readonly settings: string
   readonly companySettings: string | null
   readonly profile: string
+  readonly deletedItems: string
 }
 
 const PLATFORM: AppPaths = {
@@ -89,6 +90,7 @@ const PLATFORM: AppPaths = {
   settings: '/platform/settings',
   companySettings: null,
   profile: '/platform/profile',
+  deletedItems: '/platform/deleted-items',
 }
 
 const WORKSPACE: AppPaths = {
@@ -138,11 +140,17 @@ const WORKSPACE: AppPaths = {
   settings: '/settings',
   companySettings: '/settings/company',
   profile: '/settings/profile',
+  deletedItems: '/deleted-items',
+}
+
+export function isPlatformRole(role: RoleName | null | undefined): boolean {
+  return role === 'SUPER_ADMIN' || role === 'PLATFORM_ADMIN'
 }
 
 export function shellForRole(role: RoleName): Shell {
   switch (role) {
     case 'SUPER_ADMIN':
+    case 'PLATFORM_ADMIN':
       return 'platform'
     case 'COMPANY_ADMIN':
     case 'USER':
@@ -156,4 +164,8 @@ export function pathsFor(shell: Shell): AppPaths {
 
 export function pathsForRole(role: RoleName): AppPaths {
   return pathsFor(shellForRole(role))
+}
+
+export function homeForRole(role: RoleName): string {
+  return pathsForRole(role).overview
 }

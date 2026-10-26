@@ -15,7 +15,7 @@ export function CompanyFeaturesSection({
   editable,
   onChanged,
 }: {
-  companyId: number
+  companyId: string
   companyName: string
   editable: boolean
   onChanged?: () => void

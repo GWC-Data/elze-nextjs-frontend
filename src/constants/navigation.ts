@@ -17,6 +17,7 @@ import {
   Settings,
   ShieldCheck,
   SlidersHorizontal,
+  Trash2,
   UserCircle,
   Users,
   UsersRound,
@@ -39,17 +40,29 @@ export interface NavGroup {
   items: NavItem[]
 }
 
-function allowed(items: NavItem[], can: (permission: string) => boolean): NavItem[] {
+type Keep = (item: NavItem) => boolean
+
+function kept(items: NavItem[], keep: Keep): NavItem[] {
   return items
-    .filter((item) => !item.permission || can(item.permission))
-    .map((item) => (item.children ? { ...item, children: allowed(item.children, can) } : item))
+    .filter(keep)
+    .map((item) => (item.children ? { ...item, children: kept(item.children, keep) } : item))
 }
 
-function visible(groups: NavGroup[], can: (permission: string) => boolean): NavGroup[] {
+function visible(groups: NavGroup[], keep: Keep): NavGroup[] {
   return groups
-    .map((group) => ({ ...group, items: allowed(group.items, can) }))
+    .map((group) => ({ ...group, items: kept(group.items, keep) }))
     .filter((group) => group.items.length > 0)
 }
+
+const permitted =
+  (can: (permission: string) => boolean): Keep =>
+  (item) =>
+    !item.permission || can(item.permission)
+
+const listed =
+  (allowed: ReadonlySet<string>): Keep =>
+  (item) =>
+    allowed.has(item.path)
 
 function lakehouse(paths: AppPaths): NavItem {
   return {
@@ -108,6 +121,7 @@ function platformGroups(paths: AppPaths): NavGroup[] {
       title: 'System',
       items: [
         { label: 'Audit log', path: paths.audit, icon: Activity },
+        { label: 'Deleted items', path: paths.deletedItems, icon: Trash2, permission: 'delete.permanent' },
       ],
     },
   ]
@@ -152,12 +166,17 @@ function workspaceGroups(paths: AppPaths, role?: RoleName): NavGroup[] {
       title: 'Activity',
       items: [
         { label: role === 'COMPANY_ADMIN' ? 'Audit log' : 'My activity', path: paths.audit, icon: History },
+        { label: 'Deleted items', path: paths.deletedItems, icon: Trash2, permission: 'delete.permanent' },
       ],
     },
   ]
 }
 
-export function accountMenuFor(paths: AppPaths, can: (permission: string) => boolean): NavItem[] {
+function groupsFor(paths: AppPaths, role?: RoleName): NavGroup[] {
+  return paths.shell === 'platform' ? platformGroups(paths) : workspaceGroups(paths, role)
+}
+
+function accountItems(paths: AppPaths): NavItem[] {
   const items: NavItem[] =
     paths.shell === 'platform'
       ? [
@@ -173,15 +192,28 @@ export function accountMenuFor(paths: AppPaths, can: (permission: string) => boo
           },
           { label: 'Your account', path: paths.profile, icon: UserCircle },
         ]
-  return items.filter((item) => item.path && (!item.permission || can(item.permission)))
+  return items.filter((item) => item.path)
 }
 
-export function navigationFor(
-  paths: AppPaths,
-  can: (permission: string) => boolean,
-  role?: RoleName
-): NavGroup[] {
-  return visible(paths.shell === 'platform' ? platformGroups(paths) : workspaceGroups(paths, role), can)
+export function navigationPaths(paths: AppPaths, can: (permission: string) => boolean, role?: RoleName): string[] {
+  const found: string[] = []
+  const collect = (items: NavItem[]) => {
+    for (const item of items) {
+      found.push(item.path)
+      if (item.children) collect(item.children)
+    }
+  }
+  for (const group of visible(groupsFor(paths, role), permitted(can))) collect(group.items)
+  collect(accountItems(paths).filter(permitted(can)))
+  return found
+}
+
+export function navigationWithin(paths: AppPaths, allowed: ReadonlySet<string>, role?: RoleName): NavGroup[] {
+  return visible(groupsFor(paths, role), listed(allowed))
+}
+
+export function accountMenuWithin(paths: AppPaths, allowed: ReadonlySet<string>): NavItem[] {
+  return accountItems(paths).filter(listed(allowed))
 }
 
 export function isNavItemActive(item: NavItem, pathname: string): boolean {

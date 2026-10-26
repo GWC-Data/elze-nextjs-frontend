@@ -1,12 +1,13 @@
-'use client'
-
 import { Suspense } from 'react'
 import ActivatePage from '@/views/ActivatePage'
+import { SessionBoundary } from '@/server/SessionBoundary'
 
 export default function Page() {
   return (
-    <Suspense>
-      <ActivatePage />
-    </Suspense>
+    <SessionBoundary>
+      <Suspense>
+        <ActivatePage />
+      </Suspense>
+    </SessionBoundary>
   )
 }

@@ -83,7 +83,7 @@ export function ConnectionForm({
         host: values.host?.trim() ?? '',
         token: values.token ?? '',
         limit: DEFAULT_DATASET_LIMIT,
-        ...(isPlatform ? { companyId: Number(companyId) } : {}),
+        ...(isPlatform ? { companyId } : {}),
       })
       setValues((v) => ({ ...v, token: '' }))
       setResult(created)
@@ -136,7 +136,7 @@ export function ConnectionForm({
                 </SelectTrigger>
                 <SelectContent>
                   {(companies.data ?? []).map((company) => (
-                    <SelectItem key={company.id} value={String(company.id)}>
+                    <SelectItem key={company.id} value={company.id}>
                       {company.name}
                     </SelectItem>
                   ))}

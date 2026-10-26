@@ -14,7 +14,7 @@ export interface ListQuery {
 }
 
 export interface Company {
-  id: number
+  id: string
   name: string
   slug: string
   active: boolean
@@ -42,12 +42,12 @@ export interface CompanyFeature extends FeatureDef {
 }
 
 export interface CompanyFeatures {
-  companyId: number
+  companyId: string
   features: CompanyFeature[]
 }
 
 export interface CompanyOption {
-  id: number
+  id: string
   name: string
   active: boolean
 }
@@ -66,7 +66,7 @@ export interface NewCompany {
 export type AdminUser = Omit<AuthUser, 'permissions'>
 
 export interface UserListItem {
-  id: number
+  id: string
   username: string
   email: string
   role: RoleName
@@ -81,7 +81,7 @@ export interface UserListItem {
 }
 
 export interface UserOption {
-  id: number
+  id: string
   username: string
   email: string
 }
@@ -105,7 +105,7 @@ export interface RolePermissionOption extends PermissionDef {
 }
 
 export interface RolePermissionOptions {
-  companyId: number
+  companyId: string
   features: FeatureKey[]
   permissions: RolePermissionOption[]
 }
@@ -135,7 +135,7 @@ export interface BuiltInCompanyRole {
 }
 
 export interface CompanyRoles {
-  companyId: number
+  companyId: string
   features: FeatureKey[]
   builtIn: BuiltInCompanyRole[]
   custom: CompanyRole[]
@@ -145,7 +145,7 @@ export interface CompanyRoleInput {
   name: string
   description?: string | null
   permissionIds: string[]
-  companyId?: number
+  companyId?: string
 }
 
 export interface AccessLevelDef {
@@ -165,6 +165,19 @@ export interface Role {
   userCount: number
 }
 
+export interface AssignableRole {
+  id: string
+  role: RoleName
+  label: string
+  description: string | null
+  scope: 'platform' | 'company'
+}
+
+export interface AssignableRoles {
+  companyId: string | null
+  roles: AssignableRole[]
+}
+
 export interface RolePermissions {
   id: string
   role: RoleName
@@ -175,7 +188,7 @@ export interface RolePermissions {
 }
 
 export interface UserPermissions {
-  userId: number
+  userId: string
   role: { id: string | null; name: string | null; tier: RoleName; kind: string | null }
   rolePermissionIds: string[]
   extraPermissionIds: string[]
@@ -184,8 +197,8 @@ export interface UserPermissions {
 }
 
 export interface Group {
-  id: number
-  companyId: number
+  id: string
+  companyId: string
   companyName: string
   name: string
   active: boolean
@@ -194,7 +207,7 @@ export interface Group {
 }
 
 export interface GroupDetail extends Group {
-  userIds: number[]
+  userIds: string[]
 }
 
 export interface DashboardSummary {
@@ -210,28 +223,28 @@ export interface UserGrant {
   level: AccessLevel
   levelId: string
   origin: 'direct' | 'group'
-  groupId?: number
+  groupId?: string
   groupName?: string
 }
 
 export interface DashboardGrants {
   dashboardId: string
   you?: {
-    userId: number
+    userId: string
     level: AccessLevel
     levelId: string | null
     administrator: boolean
     mayRevoke: boolean
   }
   users: Array<{
-    userId: number
+    userId: string
     username: string
     email: string
     level: AccessLevel
     levelId: string
   }>
   groups: Array<{
-    groupId: number
+    groupId: string
     groupName: string
     level: AccessLevel
     levelId: string
@@ -257,7 +270,7 @@ export interface ScopeOptions {
 }
 
 export interface UserScope {
-  userId: number
+  userId: string
   scopes: Record<string, string[]>
   enforced: boolean
 }
@@ -271,9 +284,9 @@ export interface AuditLogEntry {
   summary: string
   detail: Record<string, unknown>
   actor?: string
-  actorId?: number
-  actorCompanyId?: number
-  companyId?: number
+  actorId?: string
+  actorCompanyId?: string
+  companyId?: string
   companyName?: string
 }
 
@@ -292,8 +305,8 @@ export interface PlatformOverview {
   usersPending: number
   companyAdmins: number
   groups: number
-  assignments: number
-  dashboards: number
+  assignments?: number
+  dashboards?: number
   factsGenerated?: number | null
   factsPending?: number | null
 }
@@ -304,8 +317,8 @@ export interface WorkspaceOverview {
   usersPending: number
   groups: number
   groupsActive: number
-  dashboards: number
-  dashboardsGranted: number
+  dashboards?: number
+  dashboardsGranted?: number
   factsGenerated?: number | null
   factsPending?: number | null
 }
@@ -319,8 +332,22 @@ export interface PlatformSettings {
   login: { maxAttempts: number; windowSeconds: number; lockoutSeconds: number }
   password: { minLength: number; bcryptRounds: number }
   session: { cookieSecure: boolean; cookieSameSite: string }
-  engine: { queryConcurrency: number; dashboardCount: number }
+  engine: { queryConcurrency: number; dashboardCount?: number }
   email: { provider: string; from: string }
+}
+
+export type DeletedItemType = 'user' | 'group' | 'role' | 'company' | 'context' | 'version'
+
+export interface DeletedItem {
+  type: DeletedItemType
+  id: string
+  name: string
+  detail: string | null
+  companyId: string | null
+  companyName: string | null
+  parent: { id: string; name: string | null } | null
+  deletedAt: string
+  deletedBy: { id: string; name: string | null } | null
 }
 
 export interface HealthStatus {

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { QueryClient, UseQueryOptions } from '@tanstack/react-query'
 import { isEndpointMissing } from '@/api/client'
+import type { DeleteResult } from '@/api/client'
 import * as connectionsApi from '@/api/connection.api'
 import * as datasetsApi from '@/api/dataset.api'
 import * as profileApi from '@/api/profile.api'
@@ -104,8 +105,9 @@ export function useCreateVersion(connectionId: string | null) {
 
 export function useDeleteVersion() {
   const qc = useQueryClient()
-  return useMutation<unknown, unknown, { connectionId: string; versionId: string }>({
-    mutationFn: ({ connectionId, versionId }) => versionsApi.deleteVersion(connectionId, versionId),
+  return useMutation<unknown, unknown, { connectionId: string; versionId: string; permanent?: boolean }>({
+    mutationFn: ({ connectionId, versionId, permanent }) =>
+      versionsApi.deleteVersion(connectionId, versionId, { permanent }),
     onSuccess: (_data, { connectionId, versionId }) => {
       qc.invalidateQueries({ queryKey: contextKeys.companyPublished() })
       qc.invalidateQueries({ queryKey: contextKeys.connections(), exact: true })
@@ -189,7 +191,7 @@ export function useCreateConnection() {
       name: string
       host: string
       token: string
-      companyId?: number
+      companyId?: string
       limit?: number
     }
   >({
@@ -211,8 +213,8 @@ export function useVerifyConnection() {
 
 export function useDeleteConnection() {
   const qc = useQueryClient()
-  return useMutation<{ deleted: true }, unknown, string>({
-    mutationFn: (id) => connectionsApi.deleteConnection(id),
+  return useMutation<DeleteResult, unknown, { id: string; permanent?: boolean }>({
+    mutationFn: ({ id, permanent }) => connectionsApi.deleteConnection(id, { permanent }),
     onSuccess: () => qc.invalidateQueries({ queryKey: contextKeys.all }),
   })
 }
@@ -624,7 +626,7 @@ function sharingUpdated(qc: QueryClient, connectionId: string, sharing: ContextS
 
 export function useShareContext(connectionId: string | null) {
   const qc = useQueryClient()
-  return useMutation<ContextSharing, unknown, { userId: number; level: ContextAccessLevel }>({
+  return useMutation<ContextSharing, unknown, { userId: string; level: ContextAccessLevel }>({
     mutationFn: ({ userId, level }) => accessApi.shareContext(connectionId!, userId, level),
     onSuccess: (sharing) => sharingUpdated(qc, connectionId!, sharing),
   })
@@ -632,7 +634,7 @@ export function useShareContext(connectionId: string | null) {
 
 export function useUnshareContext(connectionId: string | null) {
   const qc = useQueryClient()
-  return useMutation<ContextSharing, unknown, number>({
+  return useMutation<ContextSharing, unknown, string>({
     mutationFn: (userId) => accessApi.unshareContext(connectionId!, userId),
     onSuccess: (sharing) => sharingUpdated(qc, connectionId!, sharing),
   })
@@ -649,7 +651,7 @@ export function useShareableGroups(connectionId: string | null, enabled = true) 
 
 export function useShareContextWithGroup(connectionId: string | null) {
   const qc = useQueryClient()
-  return useMutation<ContextSharing, unknown, { groupId: number; level: ContextAccessLevel }>({
+  return useMutation<ContextSharing, unknown, { groupId: string; level: ContextAccessLevel }>({
     mutationFn: ({ groupId, level }) => accessApi.shareContextWithGroup(connectionId!, groupId, level),
     onSuccess: (sharing) => sharingUpdated(qc, connectionId!, sharing),
   })
@@ -657,7 +659,7 @@ export function useShareContextWithGroup(connectionId: string | null) {
 
 export function useUnshareContextWithGroup(connectionId: string | null) {
   const qc = useQueryClient()
-  return useMutation<ContextSharing, unknown, number>({
+  return useMutation<ContextSharing, unknown, string>({
     mutationFn: (groupId) => accessApi.unshareContextWithGroup(connectionId!, groupId),
     onSuccess: (sharing) => sharingUpdated(qc, connectionId!, sharing),
   })

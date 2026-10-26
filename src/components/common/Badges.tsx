@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { Building2, CircleDot, CircleSlash, Clock, Eye, Pencil, Share2, ShieldCheck, User, Wrench } from 'lucide-react'
+import { Building2, CircleDot, CircleSlash, Clock, Eye, Pencil, Share2, Shield, ShieldCheck, User, Wrench } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import type { AccessLevel, RoleName, UserStatus } from '@/types/auth'
@@ -9,6 +9,10 @@ const ROLE_STYLE: Record<RoleName, { icon: ComponentType<{ className?: string }>
   SUPER_ADMIN: {
     icon: ShieldCheck,
     className: 'border-primary/25 bg-primary/10 text-primary',
+  },
+  PLATFORM_ADMIN: {
+    icon: Shield,
+    className: 'border-primary/20 bg-primary/5 text-primary',
   },
   COMPANY_ADMIN: {
     icon: Building2,

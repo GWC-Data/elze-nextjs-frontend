@@ -97,7 +97,7 @@ function ShareBody({ connectionId }: { connectionId: string }) {
 
   const [person, setPerson] = useState<ContextSharePerson | null>(null)
   const [level, setLevel] = useState<ContextAccessLevel>('view')
-  const [pendingUser, setPendingUser] = useState<number | null>(null)
+  const [pendingUser, setPendingUser] = useState<string | null>(null)
 
   if (sharing.isError) {
     return <ErrorState error={sharing.error} onRetry={() => sharing.refetch()} compact />
@@ -121,7 +121,7 @@ function ShareBody({ connectionId }: { connectionId: string }) {
     }
   }
 
-  const change = async (userId: number, who: string, next: ContextAccessLevel) => {
+  const change = async (userId: string, who: string, next: ContextAccessLevel) => {
     setPendingUser(userId)
     try {
       await share.mutateAsync({ userId, level: next })
@@ -133,7 +133,7 @@ function ShareBody({ connectionId }: { connectionId: string }) {
     }
   }
 
-  const remove = async (userId: number, who: string) => {
+  const remove = async (userId: string, who: string) => {
     setPendingUser(userId)
     try {
       await unshare.mutateAsync(userId)
@@ -317,11 +317,11 @@ function GroupsSection({
   const unshareGroup = useUnshareContextWithGroup(connectionId)
   const [groupId, setGroupId] = useState('')
   const [level, setLevel] = useState<ContextAccessLevel>('view')
-  const [pendingGroup, setPendingGroup] = useState<number | null>(null)
+  const [pendingGroup, setPendingGroup] = useState<string | null>(null)
 
   const heldIds = new Set(held.map((g) => g.groupId))
   const candidates = (options.data ?? []).filter((g) => !heldIds.has(g.groupId))
-  const chosen = candidates.find((g) => String(g.groupId) === groupId) ?? null
+  const chosen = candidates.find((g) => g.groupId === groupId) ?? null
 
   const add = async () => {
     if (!chosen) return
@@ -382,7 +382,7 @@ function GroupsSection({
             </SelectTrigger>
             <SelectContent>
               {candidates.map((g) => (
-                <SelectItem key={g.groupId} value={String(g.groupId)}>
+                <SelectItem key={g.groupId} value={g.groupId}>
                   {g.name} · {memberLabel(g.memberCount)}
                 </SelectItem>
               ))}

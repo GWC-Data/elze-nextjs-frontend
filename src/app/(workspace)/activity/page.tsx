@@ -1,12 +1,10 @@
-'use client'
-
 import View from '@/views/AuditLogPage'
-import { RouteView } from '@/router/RouteView'
+import { ServerRoute } from '@/server/ServerRoute'
 
 export default function Page() {
   return (
-    <RouteView routePath="/activity" home="/workspace">
+    <ServerRoute routePath="/activity" home="/workspace">
       <View />
-    </RouteView>
+    </ServerRoute>
   )
 }

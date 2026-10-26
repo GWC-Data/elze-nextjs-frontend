@@ -25,6 +25,7 @@ import { FormError, FormNotice, TextField } from '@/components/common/Fields'
 import { RoleSelect } from '@/components/common/RoleSelect'
 import { CompanyRoleSelect } from '@/components/common/roles/CompanyRoleSelect'
 import { ROLE_LABELS } from '@/constants/labels'
+import { isPlatformRole } from '@/router/paths'
 import { ReviewRow, Stepper } from '@/components/common/onboarding/Stepper'
 import { notify } from '@/lib/notify'
 import { SHOW_ANALYTICS } from '@/constants/sections'
@@ -53,7 +54,7 @@ export function UserOnboardingDialog({
   const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [role, setRole] = useState<RoleName>('USER')
-  const [companyId, setCompanyId] = useState<number | null>(null)
+  const [companyId, setCompanyId] = useState<string | null>(null)
   const [customRoleId, setCustomRoleId] = useState<string | null>(null)
 
   const [pending, setPending] = useState(false)
@@ -99,7 +100,10 @@ export function UserOnboardingDialog({
       }
 
       const user = platformMode
-        ? await createPlatformUser({ ...payload, companyId: companyId ?? undefined })
+        ? await createPlatformUser({
+            ...payload,
+            companyId: isPlatformRole(role) ? undefined : (companyId ?? undefined),
+          })
         : await createTeamMember(payload)
 
       setCreated(user)
@@ -113,7 +117,7 @@ export function UserOnboardingDialog({
   }
 
   const personReady = username.trim().length > 0 && email.trim().length > 0
-  const accessReady = !platformMode || role === 'SUPER_ADMIN' || companyId !== null
+  const accessReady = !platformMode || isPlatformRole(role) || companyId !== null
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : close())}>
@@ -171,7 +175,7 @@ export function UserOnboardingDialog({
 
             {step === 2 && (
               <form onSubmit={submitStep} className="space-y-4" noValidate>
-                {platformMode && role !== 'SUPER_ADMIN' && (
+                {platformMode && !isPlatformRole(role) && (
                   <div className="space-y-1.5">
                     <Label htmlFor="onboarding-company" className="text-xs font-medium">
                       Company
@@ -179,7 +183,7 @@ export function UserOnboardingDialog({
                     <Select
                       value={companyId === null ? '' : String(companyId)}
                       onValueChange={(value) => {
-                        setCompanyId(Number(value))
+                        setCompanyId(value)
                         setCustomRoleId(null)
                       }}
                     >
@@ -190,7 +194,7 @@ export function UserOnboardingDialog({
                         {(companies ?? [])
                           .filter((company) => company.active)
                           .map((company) => (
-                            <SelectItem key={company.id} value={String(company.id)}>
+                            <SelectItem key={company.id} value={company.id}>
                               {company.name}
                             </SelectItem>
                           ))}
@@ -202,7 +206,12 @@ export function UserOnboardingDialog({
                   </div>
                 )}
 
-                <RoleSelect value={role} onChange={setRole} includePlatform={platformMode} />
+                <RoleSelect
+                  value={role}
+                  onChange={setRole}
+                  scope={platformMode ? 'any' : 'company'}
+                  companyId={platformMode ? companyId : null}
+                />
 
                 {role === 'USER' && (!platformMode || companyId !== null) ? (
                   <CompanyRoleSelect
@@ -240,7 +249,7 @@ export function UserOnboardingDialog({
                     <ReviewRow
                       label="Company"
                       value={
-                        role === 'SUPER_ADMIN'
+                        isPlatformRole(role)
                           ? 'Platform (no company)'
                           : platformMode
                             ? (selectedCompany?.name ?? '—')

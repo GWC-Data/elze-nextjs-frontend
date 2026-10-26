@@ -1,0 +1,53 @@
+const USER_ACTIONS = ['user.activate', 'user.create', 'user.deactivate', 'user.delete', 'user.update'] as const
+
+const AGENT_ACTIONS = ['agent.delete', 'agent.manage_all', 'agent.schedule', 'agent.update'] as const
+
+export const PAGE_ABILITIES = {
+  AccessPage: ['access.grant', 'access.revoke'],
+  AgentLibraryPage: ['agent.create', ...AGENT_ACTIONS],
+  ArchitecturePage: ['context.create', 'context.read'],
+  CompaniesPage: ['company.create'],
+  CompanyDetailPage: [
+    'company.delete',
+    'company.features',
+    'company.update',
+    'dashboard.assign',
+    'delete.permanent',
+    'role.read',
+    ...USER_ACTIONS,
+  ],
+  CompanyRolesPage: ['delete.permanent', 'role.create', 'role.delete', 'role.edit'],
+  CompanySettingsPage: ['company.update'],
+  DashboardPage: ['access.grant', 'dashboard.delete', 'dashboard.update', 'delete.permanent'],
+  DashboardsPage: ['access.grant', 'dashboard.create', 'dashboard.delete', 'delete.permanent'],
+  DataAnalystPage: ['context.read'],
+  DeletedItemsPage: ['delete.permanent'],
+  GroupsPage: [
+    'access.grant',
+    'access.revoke',
+    'context.read',
+    'delete.permanent',
+    'group.create',
+    'group.delete',
+    'group.update',
+  ],
+  LibraryAgentChatPage: [...AGENT_ACTIONS],
+  LibraryAgentPage: ['delete.permanent', ...AGENT_ACTIONS],
+  MetadataLakehouseBuilderPage: ['context.create', 'context.publish'],
+  MetadataLakehousePage: ['context.create', 'delete.permanent'],
+  NotFoundPage: ['context.read', 'dashboard.read'],
+  OverviewPage: ['access.read', 'context.read', 'dashboard.read', 'group.read', 'user.read'],
+  PeoplePage: ['delete.permanent', 'role.read', ...USER_ACTIONS],
+  PersonPage: [
+    'access.grant',
+    'access.read',
+    'access.revoke',
+    'delete.permanent',
+    'role.read',
+    'scope.read',
+    'scope.update',
+    ...USER_ACTIONS,
+  ],
+  PlaybooksPage: ['playbook.create', 'playbook.run', 'playbook.update'],
+  RolesPage: ['role.update'],
+} as const satisfies Record<string, readonly string[]>

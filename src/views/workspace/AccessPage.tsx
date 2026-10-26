@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { KeyRound, Loader2, Plus, UserPlus, UsersRound } from 'lucide-react'
 import {
@@ -344,9 +346,9 @@ function GrantDialog({
     setPending(true)
     try {
       if (mode === 'user') {
-        await grantUserAccess(dashboardId, Number(targetId), level)
+        await grantUserAccess(dashboardId, targetId, level)
       } else {
-        await grantGroupAccess(dashboardId, Number(targetId), level)
+        await grantGroupAccess(dashboardId, targetId, level)
       }
       notify.success(
         `Access to ${dashboardTitle} granted.`,
@@ -394,12 +396,12 @@ function GrantDialog({
               <SelectContent>
                 {mode === 'user'
                   ? (people.data ?? []).map((person) => (
-                      <SelectItem key={person.id} value={String(person.id)}>
+                      <SelectItem key={person.id} value={person.id}>
                         {person.username}
                       </SelectItem>
                     ))
                   : (groups.data ?? []).map((group) => (
-                      <SelectItem key={group.id} value={String(group.id)}>
+                      <SelectItem key={group.id} value={group.id}>
                         {group.name} · {group.memberCount}{' '}
                         {group.memberCount === 1 ? 'member' : 'members'}
                       </SelectItem>

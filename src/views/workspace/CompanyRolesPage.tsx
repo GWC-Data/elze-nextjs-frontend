@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Loader2, Pencil, Plus, RotateCcw, ShieldCheck, Trash2 } from 'lucide-react'
@@ -14,7 +16,7 @@ import { errorMessage } from '@/api/client'
 import { useAsync } from '@/hooks/useAsync'
 import { useAuth } from '@/context/authContext'
 import { Page, PageHeader, Section } from '@/components/common/Page'
-import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { ConfirmDialog, DeleteConfirmDialog } from '@/components/common/ConfirmDialog'
 import { FormError, TextField } from '@/components/common/Fields'
 import { EmptyState, ErrorState, InlineLoading } from '@/components/common/States'
 import { PermissionGrid } from '@/components/common/roles/PermissionGrid'
@@ -48,12 +50,12 @@ export default function CompanyRolesPage() {
   const permissionOptions = options.data?.permissions ?? []
   const enabledFeatures = roles.data?.features ?? []
 
-  const remove = async () => {
+  const remove = async (permanent: boolean) => {
     if (!deleting) return
     setDeletePending(true)
     try {
-      await deleteCompanyRole(deleting.id)
-      notify.success(`Role “${deleting.name}” deleted.`)
+      await deleteCompanyRole(deleting.id, { permanent })
+      notify.success(`Role “${deleting.name}” ${permanent ? 'permanently deleted' : 'deleted'}.`)
       setDeleting(null)
       roles.reload()
     } catch (err) {
@@ -296,19 +298,18 @@ export default function CompanyRolesPage() {
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog
+      <DeleteConfirmDialog
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}
         title={`Delete the role “${deleting?.name ?? ''}”?`}
         body={
           deleting && deleting.userCount > 0
             ? `${deleting.userCount} member${deleting.userCount === 1 ? ' holds' : 's hold'} it. Give them another role first.`
-            : 'Nobody holds this role. It is removed for good.'
+            : 'Nobody holds this role. It is removed from every list and its name can be used again.'
         }
         confirmLabel="Delete role"
-        destructive
         pending={deletePending}
-        onConfirm={() => void remove()}
+        onConfirm={(permanent) => void remove(permanent)}
       />
     </Page>
   )

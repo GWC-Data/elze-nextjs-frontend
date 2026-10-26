@@ -1,12 +1,11 @@
-'use client'
-
 import View from '@/views/agent/PlaybooksPage'
-import { RouteView } from '@/router/RouteView'
+import { ServerRoute } from '@/server/ServerRoute'
+import { PAGE_ABILITIES } from '@/constants/pageAbilities'
 
 export default function Page() {
   return (
-    <RouteView routePath="playbooks/:connectionId?" home="/platform" permission={"playbook.read"}>
+    <ServerRoute routePath="playbooks/:connectionId?" home="/platform" permission={"playbook.read"} abilities={PAGE_ABILITIES.PlaybooksPage}>
       <View />
-    </RouteView>
+    </ServerRoute>
   )
 }

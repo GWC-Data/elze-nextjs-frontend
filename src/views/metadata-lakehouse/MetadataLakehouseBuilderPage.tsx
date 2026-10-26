@@ -1,3 +1,5 @@
+'use client'
+
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from '@/lib/router'
 import { ArrowLeft, Eye, GitBranchPlus, Loader2, Pencil, Share2 } from 'lucide-react'

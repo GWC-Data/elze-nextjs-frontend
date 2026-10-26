@@ -2,7 +2,7 @@ import type { LibraryAgent } from '@/types/agentLibrary'
 
 export function agentAccess(
   agent: LibraryAgent,
-  userId: number | undefined,
+  userId: string | undefined,
   can: (permission: string) => boolean
 ): { edit: boolean; remove: boolean; schedule: boolean } {
   const mine = agent.ownerId == null || agent.ownerId === userId

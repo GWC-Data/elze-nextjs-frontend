@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Loader2, Plus, Trash2, UsersRound } from 'lucide-react'
@@ -21,7 +23,7 @@ import { AccessLevelBadge } from '@/components/common/Badges'
 import { GrantActionsMenu } from '@/components/common/GrantActionsMenu'
 import { ACCESS_LEVEL_LABELS } from '@/constants/labels'
 import { ChipSelect } from '@/components/common/ChipSelect'
-import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { DeleteConfirmDialog } from '@/components/common/ConfirmDialog'
 import { TextField } from '@/components/common/Fields'
 import { GrantPicker } from '@/components/common/people/GrantPicker'
 import { GroupContexts } from '@/components/common/groups/GroupContexts'
@@ -61,17 +63,20 @@ export default function GroupsPage() {
 
   const rows = groups.data ?? []
 
-  const [picked, setPicked] = useState<number | null>(null)
+  const [picked, setPicked] = useState<string | null>(null)
   const selectedId =
     picked !== null && rows.some((group) => group.id === picked) ? picked : (rows[0]?.id ?? null)
   const selectedGroup = rows.find((group) => group.id === selectedId) ?? null
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (permanent: boolean) => {
     if (!deleting) return
     setDeletePending(true)
     try {
-      await deleteGroup(deleting.id)
-      notify.success(`${deleting.name} was deleted.`, 'The access it carried went with it.')
+      await deleteGroup(deleting.id, { permanent })
+      notify.success(
+        `${deleting.name} was ${permanent ? 'permanently deleted' : 'deleted'}.`,
+        'The access it carried went with it.'
+      )
       setPicked(null)
       groups.reload()
       setDeleting(null)
@@ -193,20 +198,19 @@ export default function GroupsPage() {
         />
       )}
 
-      <ConfirmDialog
+      <DeleteConfirmDialog
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}
         title={deleting ? `Delete ${deleting.name}?` : ''}
-        body="The group is removed along with its membership."
+        body="The group is removed from every list and grants nothing any more. Its name can be used again."
         consequence={
           deleting && deleting.memberCount > 0
             ? `${deleting.memberCount} ${deleting.memberCount === 1 ? 'person' : 'people'} will lose any access they had only through this group.`
             : undefined
         }
         confirmLabel="Delete group"
-        destructive
         pending={deletePending}
-        onConfirm={confirmDelete}
+        onConfirm={(permanent) => void confirmDelete(permanent)}
       />
     </Page>
   )
@@ -217,7 +221,7 @@ function GroupEditor({
   onChanged,
   onDelete,
 }: {
-  groupId: number
+  groupId: string
   onChanged: () => void
   onDelete: () => void
 }) {
@@ -227,7 +231,7 @@ function GroupEditor({
   const group = useAsync(() => fetchGroup(groupId), [groupId])
   const people = useAsync(() => listUserOptions(), [])
 
-  type Draft = { name: string; active: boolean; memberIds: number[] }
+  type Draft = { name: string; active: boolean; memberIds: string[] }
   const [draft, setDraft] = useState<Draft | null>(null)
   const [pending, setPending] = useState(false)
 
@@ -352,7 +356,7 @@ function GroupEditor({
   )
 }
 
-function GroupAccess({ groupId }: { groupId: number }) {
+function GroupAccess({ groupId }: { groupId: string }) {
   const { can } = useAuth()
   const mayGrant = can('access.grant')
   const mayRevoke = can('access.revoke')
@@ -471,7 +475,7 @@ function CreateGroupDialog({
 }: {
   isPlatform: boolean
   onClose: () => void
-  onCreated: (groupId: number) => void
+  onCreated: (groupId: string) => void
 }) {
   const [name, setName] = useState('')
   const [companyId, setCompanyId] = useState('')
@@ -491,7 +495,7 @@ function CreateGroupDialog({
     try {
       const group = await createGroup({
         name: name.trim(),
-        companyId: isPlatform ? Number(companyId) : undefined,
+        companyId: isPlatform ? companyId : undefined,
       })
       notify.success(`${group.name} was created.`, 'Add members and give it access next.')
       onCreated(group.id)
@@ -535,7 +539,7 @@ function CreateGroupDialog({
                   {(companies.data ?? [])
                     .filter((company) => company.active)
                     .map((company) => (
-                      <SelectItem key={company.id} value={String(company.id)}>
+                      <SelectItem key={company.id} value={company.id}>
                         {company.name}
                       </SelectItem>
                     ))}

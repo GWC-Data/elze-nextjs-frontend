@@ -261,7 +261,7 @@ export interface CreateDashboardPayload {
   id?: string
   title: string
   description?: string
-  companyId?: number | null
+  companyId?: string | null
   dataSource?: unknown
   layout?: unknown
   slicers?: unknown[]
@@ -273,7 +273,7 @@ export interface CreatedDashboard {
   id: string
   title: string
   description?: string | null
-  companyId: number | null
+  companyId: string | null
   accessLevel: string
   spec?: unknown
 }

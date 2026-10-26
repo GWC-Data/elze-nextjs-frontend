@@ -31,12 +31,12 @@ export function listShareablePeople(connectionId: string): Promise<ContextShareP
   return contextHttp.get<ContextSharePerson[]>(endpoints.context.accessPeople(connectionId))
 }
 
-export async function shareContext(connectionId: string, userId: number, level: ContextAccessLevel): Promise<ContextSharing> {
+export async function shareContext(connectionId: string, userId: string, level: ContextAccessLevel): Promise<ContextSharing> {
   const levelId = await contextLevelId(connectionId, level)
   return remember(await contextHttp.put<ContextSharing>(endpoints.context.accessUser(connectionId, userId), { levelId }))
 }
 
-export async function unshareContext(connectionId: string, userId: number): Promise<ContextSharing> {
+export async function unshareContext(connectionId: string, userId: string): Promise<ContextSharing> {
   return remember(await contextHttp.delete<ContextSharing>(endpoints.context.accessUser(connectionId, userId)))
 }
 
@@ -46,14 +46,14 @@ export function listShareableGroups(connectionId: string): Promise<ContextShareG
 
 export async function shareContextWithGroup(
   connectionId: string,
-  groupId: number,
+  groupId: string,
   level: ContextAccessLevel
 ): Promise<ContextSharing> {
   const levelId = await contextLevelId(connectionId, level)
   return remember(await contextHttp.put<ContextSharing>(endpoints.context.accessGroup(connectionId, groupId), { levelId }))
 }
 
-export async function unshareContextWithGroup(connectionId: string, groupId: number): Promise<ContextSharing> {
+export async function unshareContextWithGroup(connectionId: string, groupId: string): Promise<ContextSharing> {
   return remember(await contextHttp.delete<ContextSharing>(endpoints.context.accessGroup(connectionId, groupId)))
 }
 

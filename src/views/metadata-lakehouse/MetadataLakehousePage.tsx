@@ -1,3 +1,5 @@
+'use client'
+
 import { useDeferredValue, useState } from 'react'
 import { Link, useNavigate } from '@/lib/router'
 import {
@@ -12,7 +14,7 @@ import {
 import { useAuth } from '@/context/authContext'
 import { usePaths } from '@/hooks/usePaths'
 import { Page, PageHeader, Section } from '@/components/common/Page'
-import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { DeleteConfirmDialog } from '@/components/common/ConfirmDialog'
 import { CardGridSkeleton, EmptyState, ErrorState } from '@/components/common/States'
 import { Pagination } from '@/components/common/Pagination'
 import { SearchBox, SearchToolbar } from '@/components/common/SearchBox'
@@ -92,11 +94,14 @@ function DraftsView() {
     }
   }
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (permanent: boolean) => {
     if (!deleting) return
     try {
-      await remove.mutateAsync(deleting.id)
-      notify.success(`${deleting.name} was removed.`, 'Its stored credential was deleted.')
+      await remove.mutateAsync({ id: deleting.id, permanent })
+      notify.success(
+        `${deleting.name} was ${permanent ? 'permanently removed' : 'removed'}.`,
+        permanent ? 'Its stored credential was erased.' : undefined
+      )
       setDeleting(null)
     } catch (err) {
       notify.failure('remove that connection', err)
@@ -190,16 +195,15 @@ function DraftsView() {
 
       <ShareDialogFor target={shareFor} onClose={() => setShareFor(null)} />
 
-      <ConfirmDialog
+      <DeleteConfirmDialog
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}
         title={deleting ? `Remove ${deleting.name}?` : ''}
-        body="The connection and its stored token are deleted."
-        consequence="The dataset selection goes with it. Nothing in the warehouse is touched, but reconnecting means entering a token again."
+        body="The connection, its dataset selection and its published versions disappear from every list and can no longer be opened."
+        consequence="Nothing in the warehouse is touched, but reconnecting means entering a token again."
         confirmLabel="Remove connection"
-        destructive
         pending={remove.isPending}
-        onConfirm={confirmDelete}
+        onConfirm={(permanent) => void confirmDelete(permanent)}
       />
     </Page>
   )

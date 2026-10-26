@@ -1,12 +1,10 @@
-'use client'
-
 import View from '@/views/nexus/NexusPage'
-import { RouteView } from '@/router/RouteView'
+import { ServerRoute } from '@/server/ServerRoute'
 
 export default function Page() {
   return (
-    <RouteView routePath="/nexus/playbooks" home="/workspace">
+    <ServerRoute routePath="/nexus/playbooks" home="/workspace">
       <View />
-    </RouteView>
+    </ServerRoute>
   )
 }

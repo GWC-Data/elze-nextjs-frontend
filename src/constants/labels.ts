@@ -2,12 +2,14 @@ import type { AccessLevel, RoleName } from '@/types/auth'
 
 export const ROLE_LABELS: Record<RoleName, string> = {
   SUPER_ADMIN: 'Platform owner',
+  PLATFORM_ADMIN: 'Platform admin',
   COMPANY_ADMIN: 'Company admin',
   USER: 'Member',
 }
 
 export const ROLE_DESCRIPTIONS: Record<RoleName, string> = {
   SUPER_ADMIN: 'Runs the platform. Manages every customer, and belongs to none of them.',
+  PLATFORM_ADMIN: 'Manages companies and their accounts. Cannot see or manage platform accounts.',
   COMPANY_ADMIN: 'Runs this company. Adds people and manages what each of them can use.',
   USER: 'Uses what they are given access to. Sees no administration.',
 }

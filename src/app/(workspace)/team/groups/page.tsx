@@ -1,12 +1,11 @@
-'use client'
-
 import View from '@/views/workspace/GroupsPage'
-import { RouteView } from '@/router/RouteView'
+import { ServerRoute } from '@/server/ServerRoute'
+import { PAGE_ABILITIES } from '@/constants/pageAbilities'
 
 export default function Page() {
   return (
-    <RouteView routePath="/team/groups" home="/workspace" permission={"group.read"}>
+    <ServerRoute routePath="/team/groups" home="/workspace" permission={"group.read"} abilities={PAGE_ABILITIES.GroupsPage}>
       <View />
-    </RouteView>
+    </ServerRoute>
   )
 }

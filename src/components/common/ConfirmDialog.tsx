@@ -1,5 +1,9 @@
+import { useId, useState } from 'react'
 import type { ReactNode } from 'react'
 import { AlertTriangle, Loader2 } from 'lucide-react'
+import { useAuth } from '@/context/authContext'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +22,7 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   body,
+  extra,
   consequence,
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
@@ -29,6 +34,7 @@ export function ConfirmDialog({
   onOpenChange: (open: boolean) => void
   title: string
   body: ReactNode
+  extra?: ReactNode
   consequence?: ReactNode
   confirmLabel?: string
   cancelLabel?: string
@@ -43,6 +49,8 @@ export function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{body}</AlertDialogDescription>
         </AlertDialogHeader>
+
+        {extra}
 
         {consequence && (
           <p className="flex items-start gap-2 rounded-md border border-warning/25 bg-warning/10 px-3 py-2 text-sm text-warning-foreground">
@@ -70,5 +78,75 @@ export function ConfirmDialog({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  )
+}
+
+export function DeleteConfirmDialog({
+  open,
+  onOpenChange,
+  title,
+  body,
+  consequence,
+  confirmLabel = 'Delete',
+  pending = false,
+  onConfirm,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  title: string
+  body: ReactNode
+  consequence?: ReactNode
+  confirmLabel?: string
+  pending?: boolean
+  onConfirm: (permanent: boolean) => void
+}) {
+  const { can } = useAuth()
+  const id = useId()
+  const allowPermanent = can('delete.permanent')
+  const [permanent, setPermanent] = useState(false)
+  const [wasOpen, setWasOpen] = useState(open)
+
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (!open) setPermanent(false)
+  }
+
+  const forGood = allowPermanent && permanent
+
+  return (
+    <ConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      body={body}
+      extra={
+        allowPermanent ? (
+          <div className="flex items-start gap-2.5 rounded-md border px-3 py-2.5">
+            <Checkbox
+              id={id}
+              checked={permanent}
+              onCheckedChange={(checked) => setPermanent(checked === true)}
+              disabled={pending}
+              className="mt-0.5"
+            />
+            <Label htmlFor={id} className="flex-col items-start gap-0.5 text-sm font-medium">
+              Delete permanently
+              <span className="text-xs font-normal text-muted-foreground">
+                Remove it from the database for good instead of keeping it as deleted.
+              </span>
+            </Label>
+          </div>
+        ) : undefined
+      }
+      consequence={
+        forGood
+          ? 'A permanent delete is final. The record and everything stored with it are erased and cannot be restored by anyone.'
+          : consequence
+      }
+      confirmLabel={forGood ? 'Delete permanently' : confirmLabel}
+      destructive
+      pending={pending}
+      onConfirm={() => onConfirm(forGood)}
+    />
   )
 }

@@ -1,16 +1,28 @@
+'use client'
+
 import type { ReactNode } from 'react'
 import { Navigate, OutletContextProvider } from '@/lib/router'
 import { useAuth } from '@/context/authContext'
+import { useHydrated } from '@/hooks/useHydrated'
 import { shellForRole, type Shell } from '@/router/paths'
 import ChangePasswordGate from '@/components/common/auth/ChangePasswordGate'
 import { AppSidebar } from '@/layouts/AppSidebar'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import type { AppData } from '@/types/layout'
 
-export function AppShell({ shell, children }: { shell: Shell; children: ReactNode }) {
+export function AppShell({
+  shell,
+  navigation,
+  children,
+}: {
+  shell: Shell
+  navigation: string[]
+  children: ReactNode
+}) {
   const { status, user, dashboards, refresh } = useAuth()
+  const hydrated = useHydrated()
 
-  if (status === 'RESTORING') {
+  if (status === 'RESTORING' || !hydrated) {
     return (
       <div
         className="flex min-h-screen items-center justify-center bg-background"
@@ -19,7 +31,7 @@ export function AppShell({ shell, children }: { shell: Shell; children: ReactNod
       >
         <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
           <span className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          Restoring your session…
+          {status === 'RESTORING' ? 'Restoring your session…' : 'Loading…'}
         </div>
       </div>
     )
@@ -42,7 +54,7 @@ export function AppShell({ shell, children }: { shell: Shell; children: ReactNod
   return (
     <SidebarProvider>
       <div className="flex h-screen w-screen overflow-hidden bg-background">
-        <AppSidebar />
+        <AppSidebar navigation={navigation} />
         <SidebarInset className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
           <SidebarTrigger
             className="fixed left-3 top-3 z-30 size-9 rounded-lg border bg-background/90 shadow-sm backdrop-blur md:hidden"
@@ -55,12 +67,4 @@ export function AppShell({ shell, children }: { shell: Shell; children: ReactNod
       </div>
     </SidebarProvider>
   )
-}
-
-export function PlatformShell({ children }: { children: ReactNode }) {
-  return <AppShell shell="platform">{children}</AppShell>
-}
-
-export function WorkspaceShell({ children }: { children: ReactNode }) {
-  return <AppShell shell="workspace">{children}</AppShell>
 }

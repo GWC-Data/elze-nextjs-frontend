@@ -87,8 +87,7 @@ function AccountSection({
   actions: PersonActions
   onChanged: () => void
 }) {
-  const { can, user: me } = useAuth()
-  const isPlatformActor = me?.companyId === null
+  const { can } = useAuth()
   const editable = can('user.update') && !isSelf
 
   const [chosenRole, setChosenRole] = useState<RoleName | null>(null)
@@ -135,7 +134,8 @@ function AccountSection({
           <RoleSelect
             value={role}
             onChange={setChosenRole}
-            includePlatform={isPlatformActor}
+            scope={person.companyId === null ? 'platform' : 'company'}
+            companyId={person.companyId}
             disabled={!editable || pending}
           />
           {role === 'USER' && person.companyId !== null ? (
@@ -411,7 +411,7 @@ function AccessSection({ person }: { person: AdminUser }) {
   )
 }
 
-function ScopeSection({ userId }: { userId: number }) {
+function ScopeSection({ userId }: { userId: string }) {
   const { can } = useAuth()
   const editable = can('scope.update')
 

@@ -29,7 +29,7 @@ export interface LibraryAgent {
   instructions: string
   knowledge: AgentKnowledgeRef[]
   schedule: AgentSchedule | null
-  ownerId?: number | null
+  ownerId?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -40,7 +40,7 @@ export interface LibraryAgentInput {
   role: string
   instructions: string
   knowledge: AgentKnowledgeRef[]
-  ownerId?: number
+  ownerId?: string
 }
 
 export interface LibraryChatSession {

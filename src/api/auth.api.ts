@@ -1,6 +1,6 @@
 import { get, post } from '@/api/client'
 import { endpoints } from '@/api/endpoints'
-import type { ActivationTarget, Profile, SessionResponse, SessionSummary } from '@/types/auth'
+import type { ActivationTarget, ResetTarget, SessionResponse, SessionSummary } from '@/types/auth'
 
 export function login(identifier: string, password: string): Promise<SessionResponse> {
   return post<SessionResponse>(endpoints.auth.login, { identifier, password }, { renewOnExpiry: false })
@@ -8,10 +8,6 @@ export function login(identifier: string, password: string): Promise<SessionResp
 
 export function logout(): Promise<{ state: 'UNAUTHENTICATED' }> {
   return post<{ state: 'UNAUTHENTICATED' }>(endpoints.auth.logout, undefined, { renewOnExpiry: false })
-}
-
-export function fetchProfile(): Promise<Profile> {
-  return get<Profile>(endpoints.auth.me)
 }
 
 export function fetchSessions(): Promise<SessionSummary[]> {
@@ -35,4 +31,19 @@ export function fetchActivationTarget(token: string): Promise<ActivationTarget> 
 
 export function activateAccount(token: string, password: string): Promise<SessionResponse> {
   return post<SessionResponse>(endpoints.auth.activation, { token, password }, { renewOnExpiry: false })
+}
+
+export function requestPasswordReset(identifier: string): Promise<{ message: string }> {
+  return post<{ message: string }>(endpoints.auth.forgotPassword, { identifier }, { renewOnExpiry: false })
+}
+
+export function fetchResetTarget(token: string): Promise<ResetTarget> {
+  return get<ResetTarget>(endpoints.auth.resetPassword, {
+    params: { token },
+    renewOnExpiry: false,
+  })
+}
+
+export function resetPassword(token: string, password: string): Promise<SessionResponse> {
+  return post<SessionResponse>(endpoints.auth.resetPassword, { token, password }, { renewOnExpiry: false })
 }

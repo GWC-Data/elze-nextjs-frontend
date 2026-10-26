@@ -4,7 +4,7 @@ export interface PublishedContextRow {
   connectionId: string
   connectionName: string
   provider: string
-  companyId: number | null
+  companyId: string | null
   companyName: string | null
   name: string
   versionId: string

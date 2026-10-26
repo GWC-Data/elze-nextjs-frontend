@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { KeyRound, Loader2 } from 'lucide-react'
@@ -16,7 +18,7 @@ const MIN_LENGTH = 8
 export default function ActivatePage() {
   const [params] = useSearchParams()
   const token = params.get('token') || ''
-  const { status, user, adoptSession, refresh } = useAuth()
+  const { status, user, adoptSession } = useAuth()
 
   const [target, setTarget] = useState<ActivationTarget | null>(null)
   const [linkError, setLinkError] = useState<string | null>(
@@ -64,9 +66,8 @@ export default function ActivatePage() {
     setError(null)
     setPending(true)
     try {
-      const session = await activateAccount(token, password)
-      adoptSession(session)
-      await refresh()
+      await activateAccount(token, password)
+      adoptSession()
       setActivated(true)
       notify.success('Your account is ready.', 'You are now signed in.')
     } catch (err) {

@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { Link } from '@/lib/router'
 import { AlarmClock, BrainCircuit, Layers, Pencil, Plus } from 'lucide-react'

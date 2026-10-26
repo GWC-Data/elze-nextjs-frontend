@@ -1,12 +1,11 @@
-'use client'
-
 import View from '@/views/agent/DataAnalystPage'
-import { RouteView } from '@/router/RouteView'
+import { ServerRoute } from '@/server/ServerRoute'
+import { PAGE_ABILITIES } from '@/constants/pageAbilities'
 
 export default function Page() {
   return (
-    <RouteView routePath="data-analyst/:connectionId?/:sessionId?" home="/platform" permission={["analyst.use", "playbook.run"]}>
+    <ServerRoute routePath="data-analyst/:connectionId?/:sessionId?" home="/platform" permission={["analyst.use", "playbook.run"]} abilities={PAGE_ABILITIES.DataAnalystPage}>
       <View />
-    </RouteView>
+    </ServerRoute>
   )
 }

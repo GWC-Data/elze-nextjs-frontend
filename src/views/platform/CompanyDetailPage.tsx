@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from '@/lib/router'
@@ -31,7 +33,7 @@ import {
   InlineLoading,
 } from '@/components/common/States'
 import { FormNotice, TextField } from '@/components/common/Fields'
-import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { DeleteConfirmDialog } from '@/components/common/ConfirmDialog'
 import { UserOnboardingDialog } from '@/components/common/onboarding/UserOnboardingDialog'
 import { CompanyFeaturesSection } from '@/components/common/features/CompanyFeaturesSection'
 import { notify } from '@/lib/notify'
@@ -39,11 +41,11 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { isUuid } from '@/lib/utils'
 import type { DashboardSummary } from '@/types/admin'
 
 export default function CompanyDetailPage() {
-  const { companyId: companyIdParam } = useParams()
-  const companyId = Number(companyIdParam)
+  const { companyId = '' } = useParams()
   const { can } = useAuth()
   const paths = usePaths()
   const navigate = useNavigate()
@@ -80,7 +82,7 @@ export default function CompanyDetailPage() {
 
   const [togglingDashboard, setTogglingDashboard] = useState<string | null>(null)
 
-  if (!Number.isInteger(companyId) || companyId <= 0) {
+  if (!isUuid(companyId)) {
     return (
       <Page>
         <ErrorState
@@ -152,11 +154,11 @@ export default function CompanyDetailPage() {
     }
   }
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (permanent: boolean) => {
     setDeletePending(true)
     try {
-      await deleteCompany(companyId)
-      notify.success(`${record.name} has been deleted.`)
+      await deleteCompany(companyId, { permanent })
+      notify.success(`${record.name} has been ${permanent ? 'permanently deleted' : 'deleted'}.`)
       navigate(paths.companies ?? '/platform')
     } catch (err) {
       notify.failure('delete this company', err)
@@ -298,7 +300,7 @@ export default function CompanyDetailPage() {
                 activate: (user) => activateUser(user.id),
                 deactivate: (user) => deactivateUser(user.id),
                 resendInvitation: (user) => resendActivation(user.id),
-                remove: (user) => deleteUser(user.id),
+                remove: (user, options) => deleteUser(user.id, options),
               }}
               empty={{
                 title: 'Nobody here yet',
@@ -420,7 +422,7 @@ export default function CompanyDetailPage() {
             {can('company.delete') && (
               <Section
                 title="Delete this company"
-                description="Permanent. Only possible once every account in it has been removed."
+                description="Only possible once every account in it has been removed."
                 className="border-destructive/30"
               >
                 <Button variant="destructive" onClick={() => setDeleting(true)}>
@@ -444,20 +446,19 @@ export default function CompanyDetailPage() {
         companies={[record]}
       />
 
-      <ConfirmDialog
+      <DeleteConfirmDialog
         open={deleting}
         onOpenChange={setDeleting}
         title={`Delete ${record.name}?`}
-        body="This removes the company and everything inside it. It cannot be undone."
+        body="The company is removed from every list and its name can be used again."
         consequence={
           memberCount && memberCount > 0
             ? `This company still has ${memberCount} ${memberCount === 1 ? 'account' : 'accounts'}. They must be deleted first. The server will refuse until they are.`
             : undefined
         }
         confirmLabel="Delete company"
-        destructive
         pending={deletePending}
-        onConfirm={confirmDelete}
+        onConfirm={(permanent) => void confirmDelete(permanent)}
       />
     </Page>
   )

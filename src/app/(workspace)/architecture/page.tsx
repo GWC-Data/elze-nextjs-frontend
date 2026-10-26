@@ -1,12 +1,11 @@
-'use client'
-
 import View from '@/views/ArchitecturePage'
-import { RouteView } from '@/router/RouteView'
+import { ServerRoute } from '@/server/ServerRoute'
+import { PAGE_ABILITIES } from '@/constants/pageAbilities'
 
 export default function Page() {
   return (
-    <RouteView routePath="/architecture" home="/workspace">
+    <ServerRoute routePath="/architecture" home="/workspace" abilities={PAGE_ABILITIES.ArchitecturePage}>
       <View />
-    </RouteView>
+    </ServerRoute>
   )
 }

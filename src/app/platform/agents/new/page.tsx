@@ -1,12 +1,11 @@
-'use client'
-
 import View from '@/views/agent/LibraryAgentPage'
-import { RouteView } from '@/router/RouteView'
+import { ServerRoute } from '@/server/ServerRoute'
+import { PAGE_ABILITIES } from '@/constants/pageAbilities'
 
 export default function Page() {
   return (
-    <RouteView routePath="agents/new" home="/platform" permission={"agent.create"}>
+    <ServerRoute routePath="agents/new" home="/platform" permission={"agent.create"} abilities={PAGE_ABILITIES.LibraryAgentPage}>
       <View />
-    </RouteView>
+    </ServerRoute>
   )
 }

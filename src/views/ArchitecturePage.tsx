@@ -1,3 +1,5 @@
+'use client'
+
 import { Component, Suspense, lazy } from 'react'
 import type { ComponentType, ReactNode } from 'react'
 import { Link } from '@/lib/router'

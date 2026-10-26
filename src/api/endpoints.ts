@@ -20,10 +20,11 @@ export const endpoints = {
   auth: {
     login: '/auth/login',
     logout: '/auth/logout',
-    me: '/auth/me',
     sessions: '/auth/sessions',
     changePassword: '/auth/change-password',
     activation: '/auth/activation',
+    forgotPassword: '/auth/forgot-password',
+    resetPassword: '/auth/reset-password',
   },
 
   dashboard: {
@@ -37,18 +38,19 @@ export const endpoints = {
   platform: {
     companies: '/platform/companies',
     companyOptions: '/platform/companies/options',
-    company: (id: number) => `/platform/companies/${id}`,
-    companyDashboards: (companyId: number) => `/platform/companies/${companyId}/dashboards`,
-    companyDashboard: (companyId: number, dashboardId: string) =>
+    company: (id: string) => `/platform/companies/${id}`,
+    companyDashboards: (companyId: string) => `/platform/companies/${companyId}/dashboards`,
+    companyDashboard: (companyId: string, dashboardId: string) =>
       `/platform/companies/${companyId}/dashboards/${enc(dashboardId)}`,
     users: '/platform/users',
     roles: '/platform/roles',
+    assignableRoles: '/platform/roles/assignable',
     permissions: '/platform/roles/permissions',
     rolePermissions: (roleId: string) => `/platform/roles/${enc(roleId)}/permissions`,
     settings: '/platform/settings',
     overview: '/platform/overview',
     features: '/platform/features',
-    companyFeatures: (companyId: number) => `/platform/companies/${companyId}/features`,
+    companyFeatures: (companyId: string) => `/platform/companies/${companyId}/features`,
   },
 
   workspace: {
@@ -57,6 +59,12 @@ export const endpoints = {
   },
 
   audit: '/audit',
+
+  deletedItems: {
+    root: '/deleted-items',
+    one: (type: string, id: string) => `/deleted-items/${enc(type)}/${enc(id)}`,
+    restore: (type: string, id: string) => `/deleted-items/${enc(type)}/${enc(id)}/restore`,
+  },
 
   companyRoles: {
     root: '/roles',
@@ -69,22 +77,22 @@ export const endpoints = {
     root: '/users',
     options: '/users/options',
     scopeOptions: '/users/scope-options',
-    access: (id: number) => `/users/${id}/access`,
-    scope: (id: number) => `/users/${id}/scope`,
+    access: (id: string) => `/users/${id}/access`,
+    scope: (id: string) => `/users/${id}/scope`,
   },
 
   person: {
-    one: (base: string, id: number) => `${base}/${id}`,
-    deactivate: (base: string, id: number) => `${base}/${id}/deactivate`,
-    activate: (base: string, id: number) => `${base}/${id}/activate`,
-    activation: (base: string, id: number) => `${base}/${id}/activation`,
-    permissions: (base: string, id: number) => `${base}/${id}/permissions`,
+    one: (base: string, id: string) => `${base}/${id}`,
+    deactivate: (base: string, id: string) => `${base}/${id}/deactivate`,
+    activate: (base: string, id: string) => `${base}/${id}/activate`,
+    activation: (base: string, id: string) => `${base}/${id}/activation`,
+    permissions: (base: string, id: string) => `${base}/${id}/permissions`,
   },
 
   groups: {
     root: '/groups',
-    one: (id: number) => `/groups/${id}`,
-    contexts: (id: number) => `/groups/${id}/contexts`,
+    one: (id: string) => `/groups/${id}`,
+    contexts: (id: string) => `/groups/${id}/contexts`,
   },
 
   access: {
@@ -92,10 +100,10 @@ export const endpoints = {
     grantable: '/access/dashboards/grantable',
     grants: (dashboardId: string) => `/access/dashboards/${enc(dashboardId)}/grants`,
     people: (dashboardId: string) => `/access/dashboards/${enc(dashboardId)}/people`,
-    user: (dashboardId: string, userId: number) => `/access/dashboards/${enc(dashboardId)}/users/${userId}`,
-    group: (dashboardId: string, groupId: number) =>
+    user: (dashboardId: string, userId: string) => `/access/dashboards/${enc(dashboardId)}/users/${userId}`,
+    group: (dashboardId: string, groupId: string) =>
       `/access/dashboards/${enc(dashboardId)}/groups/${groupId}`,
-    groupDashboards: (groupId: number) => `/access/groups/${groupId}/dashboards`,
+    groupDashboards: (groupId: string) => `/access/groups/${groupId}/dashboards`,
   },
 
   context: {
@@ -129,9 +137,9 @@ export const endpoints = {
     access: (id: string) => `${connectionPath(id)}/access`,
     accessPeople: (id: string) => `${connectionPath(id)}/access/people`,
     accessGeneral: (id: string) => `${connectionPath(id)}/access/general`,
-    accessUser: (id: string, userId: number) => `${connectionPath(id)}/access/users/${userId}`,
+    accessUser: (id: string, userId: string) => `${connectionPath(id)}/access/users/${userId}`,
     accessGroups: (id: string) => `${connectionPath(id)}/access/groups`,
-    accessGroup: (id: string, groupId: number) => `${connectionPath(id)}/access/groups/${groupId}`,
+    accessGroup: (id: string, groupId: string) => `${connectionPath(id)}/access/groups/${groupId}`,
   },
 
   adk: {

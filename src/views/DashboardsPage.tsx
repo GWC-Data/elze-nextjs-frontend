@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from '@/lib/router'
 import { ChartColumn, KeyRound, LayoutDashboard, Loader2, Plus, Trash2 } from 'lucide-react'

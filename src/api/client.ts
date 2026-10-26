@@ -8,11 +8,13 @@ export type ApiErrorCode =
   | 'TOKEN_EXPIRED'
   | 'INVALID_REFRESH_TOKEN'
   | 'INVALID_ACTIVATION_TOKEN'
+  | 'INVALID_RESET_TOKEN'
   | 'PASSWORD_CHANGE_REQUIRED'
   | 'ACCOUNT_DISABLED'
   | 'ACCOUNT_PENDING_ACTIVATION'
   | 'COMPANY_DISABLED'
   | 'CSRF_TOKEN_INVALID'
+  | 'ORIGIN_NOT_ALLOWED'
   | 'RATE_LIMITED'
   | 'INSUFFICIENT_PERMISSION'
   | 'TENANT_ACCESS_DENIED'
@@ -23,6 +25,7 @@ export type ApiErrorCode =
   | 'INVALID_DASHBOARD_ID'
   | 'DASHBOARD_NOT_FOUND'
   | 'INVALID_FILTER'
+  | 'DASHBOARD_SOURCE_UNAVAILABLE'
   | 'CONNECTOR_AUTH_FAILED'
   | 'CONNECTOR_UNREACHABLE'
   | 'EMAIL_DELIVERY_FAILED'
@@ -229,6 +232,19 @@ export async function patch<T>(
 export async function del<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
   const res = await http.delete<T>(url, config)
   return res.data
+}
+
+export interface DeleteOptions {
+  permanent?: boolean
+}
+
+export interface DeleteResult {
+  deleted: true
+  permanent: boolean
+}
+
+export function deleteConfig(options?: DeleteOptions): AxiosRequestConfig | undefined {
+  return options?.permanent ? { params: { permanent: true } } : undefined
 }
 
 export function errorMessage(err: unknown, fallback: string): string {

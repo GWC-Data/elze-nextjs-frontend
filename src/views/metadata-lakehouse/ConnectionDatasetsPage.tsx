@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from '@/lib/router'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'

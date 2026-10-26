@@ -1,8 +1,6 @@
-'use client'
-
 import type { ReactNode } from 'react'
-import { PlatformShell } from '@/layouts/AppShell'
+import { ShellGate } from '@/server/ShellGate'
 
 export default function Layout({ children }: { children: ReactNode }) {
-  return <PlatformShell>{children}</PlatformShell>
+  return <ShellGate shell="platform">{children}</ShellGate>
 }

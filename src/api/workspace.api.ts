@@ -1,4 +1,5 @@
-import { del, get, post, put } from '@/api/client'
+import { del, deleteConfig, get, post, put } from '@/api/client'
+import type { DeleteOptions, DeleteResult } from '@/api/client'
 import { endpoints } from '@/api/endpoints'
 import { teamUsers } from '@/api/users.api'
 import type { AccessLevel } from '@/types/auth'
@@ -40,7 +41,7 @@ export function listUserOptions(): Promise<UserOption[]> {
   return get<UserOption[]>(endpoints.users.options)
 }
 
-export function fetchUserGrants(id: number): Promise<UserGrant[]> {
+export function fetchUserGrants(id: string): Promise<UserGrant[]> {
   return get<UserGrant[]>(endpoints.users.access(id))
 }
 
@@ -48,11 +49,11 @@ export function fetchScopeOptions(): Promise<ScopeOptions> {
   return get<ScopeOptions>(endpoints.users.scopeOptions)
 }
 
-export function fetchUserScope(id: number): Promise<UserScope> {
+export function fetchUserScope(id: string): Promise<UserScope> {
   return get<UserScope>(endpoints.users.scope(id))
 }
 
-export function saveUserScope(id: number, scopes: Record<string, string[]>): Promise<UserScope> {
+export function saveUserScope(id: string, scopes: Record<string, string[]>): Promise<UserScope> {
   return put<UserScope>(endpoints.users.scope(id), { scopes })
 }
 
@@ -60,32 +61,32 @@ export function listGroups(): Promise<Group[]> {
   return get<Group[]>(endpoints.groups.root)
 }
 
-export function fetchGroup(id: number): Promise<GroupDetail> {
+export function fetchGroup(id: string): Promise<GroupDetail> {
   return get<GroupDetail>(endpoints.groups.one(id))
 }
 
-export function fetchGroupContexts(id: number): Promise<GroupSharedContext[]> {
+export function fetchGroupContexts(id: string): Promise<GroupSharedContext[]> {
   return get<GroupSharedContext[]>(endpoints.groups.contexts(id))
 }
 
 export function createGroup(body: {
   name: string
   active?: boolean
-  userIds?: number[]
-  companyId?: number
+  userIds?: string[]
+  companyId?: string
 }): Promise<Group> {
   return post<Group>(endpoints.groups.root, body)
 }
 
 export function updateGroup(
-  id: number,
-  body: { name?: string; active?: boolean; userIds?: number[] }
+  id: string,
+  body: { name?: string; active?: boolean; userIds?: string[] }
 ): Promise<Group> {
   return put<Group>(endpoints.groups.one(id), body)
 }
 
-export function deleteGroup(id: number): Promise<{ deleted: true }> {
-  return del<{ deleted: true }>(endpoints.groups.one(id))
+export function deleteGroup(id: string, options?: DeleteOptions): Promise<DeleteResult> {
+  return del<DeleteResult>(endpoints.groups.one(id), deleteConfig(options))
 }
 
 let levelsCache: Promise<AccessLevelDef[]> | null = null
@@ -106,13 +107,13 @@ async function dashboardLevelId(level: AccessLevel): Promise<string> {
   return match.id
 }
 
-export function listGrantableDashboards(companyId?: number): Promise<DashboardSummary[]> {
+export function listGrantableDashboards(companyId?: string): Promise<DashboardSummary[]> {
   return get<DashboardSummary[]>(endpoints.access.grantable, {
     params: companyId ? { companyId } : undefined,
   })
 }
 
-export function fetchDashboardGrants(dashboardId: string, companyId?: number): Promise<DashboardGrants> {
+export function fetchDashboardGrants(dashboardId: string, companyId?: string): Promise<DashboardGrants> {
   return get<DashboardGrants>(endpoints.access.grants(dashboardId), {
     params: companyId ? { companyId } : undefined,
   })
@@ -122,23 +123,23 @@ export function listShareablePeople(dashboardId: string): Promise<UserOption[]> 
   return get<UserOption[]>(endpoints.access.people(dashboardId))
 }
 
-export async function grantUserAccess(dashboardId: string, userId: number, level: AccessLevel): Promise<unknown> {
+export async function grantUserAccess(dashboardId: string, userId: string, level: AccessLevel): Promise<unknown> {
   return put(endpoints.access.user(dashboardId, userId), { levelId: await dashboardLevelId(level) })
 }
 
-export function revokeUserAccess(dashboardId: string, userId: number): Promise<unknown> {
+export function revokeUserAccess(dashboardId: string, userId: string): Promise<unknown> {
   return del(endpoints.access.user(dashboardId, userId))
 }
 
-export async function grantGroupAccess(dashboardId: string, groupId: number, level: AccessLevel): Promise<unknown> {
+export async function grantGroupAccess(dashboardId: string, groupId: string, level: AccessLevel): Promise<unknown> {
   return put(endpoints.access.group(dashboardId, groupId), { levelId: await dashboardLevelId(level) })
 }
 
-export function revokeGroupAccess(dashboardId: string, groupId: number): Promise<unknown> {
+export function revokeGroupAccess(dashboardId: string, groupId: string): Promise<unknown> {
   return del(endpoints.access.group(dashboardId, groupId))
 }
 
-export function fetchGroupDashboards(groupId: number): Promise<GroupDashboards> {
+export function fetchGroupDashboards(groupId: string): Promise<GroupDashboards> {
   return get<GroupDashboards>(endpoints.access.groupDashboards(groupId))
 }
 

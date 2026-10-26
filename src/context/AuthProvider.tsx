@@ -1,34 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 import { restoreSession, setSessionLostHandler } from '@/api/client'
-import { fetchProfile, login as loginRequest, logout as logoutRequest } from '@/api/auth.api'
+import { login as loginRequest, logout as logoutRequest } from '@/api/auth.api'
 import { notify } from '@/lib/notify'
-import { isHiddenPermission } from '@/constants/sections'
-import { AuthContext } from '@/context/authContext'
-import type { AuthState } from '@/context/authContext'
-import type { AccessibleDashboard, AuthStatus, AuthUser, SessionResponse } from '@/types/auth'
+import { homeForRole } from '@/router/paths'
+import { AuthControlContext } from '@/context/authContext'
+import type { AuthControl } from '@/context/authContext'
+import type { AuthStatus } from '@/types/auth'
+
+const MAX_RENEWALS = 2
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>('RESTORING')
-  const [user, setUser] = useState<AuthUser | null>(null)
-  const [dashboards, setDashboards] = useState<AccessibleDashboard[]>([])
+  const router = useRouter()
+  const [lost, setLost] = useState<AuthStatus | null>(null)
 
-  const statusRef = useRef(status)
-  useEffect(() => {
+  const statusRef = useRef<AuthStatus>('RESTORING')
+  const renewing = useRef(false)
+  const renewals = useRef(0)
+
+  const track = useCallback((status: AuthStatus) => {
     statusRef.current = status
-  }, [status])
-
-  const clearSession = useCallback((next: AuthStatus) => {
-    setUser(null)
-    setDashboards([])
-    setStatus(next)
-  }, [])
-
-  const applyProfile = useCallback(async () => {
-    const profile = await fetchProfile()
-    setUser(profile.user)
-    setDashboards(profile.dashboards)
-    setStatus(profile.state === 'PASSWORD_CHANGE_REQUIRED' ? 'PASSWORD_CHANGE_REQUIRED' : 'AUTHENTICATED')
   }, [])
 
   useEffect(() => {
@@ -45,67 +37,46 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
       if (reason === 'disabled') {
         statusRef.current = 'ACCOUNT_DISABLED'
-        clearSession('ACCOUNT_DISABLED')
+        setLost('ACCOUNT_DISABLED')
         notify.error('Your access has been withdrawn.', 'Contact your administrator.')
       } else {
         statusRef.current = 'SESSION_EXPIRED'
-        clearSession('SESSION_EXPIRED')
+        setLost('SESSION_EXPIRED')
         notify.warning('Your session has expired.', 'Sign in again to continue.')
       }
     })
     return () => setSessionLostHandler(null)
-  }, [clearSession])
+  }, [])
 
-  useEffect(() => {
-    let cancelled = false
-
-    const run = async () => {
-      const restored = await restoreSession()
-      if (cancelled) return
-      if (!restored) {
-        setStatus('UNAUTHENTICATED')
-        return
-      }
-      try {
-        await applyProfile()
-      } catch {
-        if (!cancelled) clearSession('UNAUTHENTICATED')
-      }
+  const renew = useCallback(() => {
+    if (renewing.current) return
+    if (renewals.current >= MAX_RENEWALS) {
+      setLost('UNAUTHENTICATED')
+      return
     }
-    void run()
+    renewing.current = true
+    renewals.current += 1
+    restoreSession()
+      .then((renewed) => {
+        if (renewed) router.refresh()
+        else setLost('UNAUTHENTICATED')
+      })
+      .finally(() => {
+        renewing.current = false
+      })
+  }, [router])
 
-    return () => {
-      cancelled = true
-    }
-  }, [applyProfile, clearSession])
-
-  useEffect(() => {
-    const onFocus = () => {
-      if (document.visibilityState !== 'visible') return
-      if (statusRef.current !== 'AUTHENTICATED') return
-      applyProfile().catch(() => undefined)
-    }
-    document.addEventListener('visibilitychange', onFocus)
-    return () => document.removeEventListener('visibilitychange', onFocus)
-  }, [applyProfile])
-
-  const adoptSession = useCallback((response: SessionResponse) => {
-    setUser(response.user)
-    setStatus(response.state === 'PASSWORD_CHANGE_REQUIRED' ? 'PASSWORD_CHANGE_REQUIRED' : 'AUTHENTICATED')
+  const settle = useCallback(() => {
+    renewals.current = 0
   }, [])
 
   const signIn = useCallback(
     async (identifier: string, password: string) => {
       const session = await loginRequest(identifier, password)
-
-      if (session.state === 'PASSWORD_CHANGE_REQUIRED') {
-        setUser(session.user)
-        setStatus('PASSWORD_CHANGE_REQUIRED')
-        return
-      }
-      await applyProfile()
+      setLost(null)
+      router.replace(homeForRole(session.user.role))
     },
-    [applyProfile]
+    [router]
   )
 
   const signOut = useCallback(async () => {
@@ -115,26 +86,24 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       notify.warning('Signed out locally.', 'The server could not be reached to end the session.')
     } finally {
-      clearSession('UNAUTHENTICATED')
+      statusRef.current = 'UNAUTHENTICATED'
+      setLost('UNAUTHENTICATED')
     }
-  }, [clearSession])
+  }, [])
 
-  const value = useMemo<AuthState>(
-    () => ({
-      status,
-      user,
-      dashboards,
-      signIn,
-      signOut,
-      adoptSession,
-      refresh: applyProfile,
-      can: (permission: string) =>
-        !isHiddenPermission(permission) && Boolean(user?.permissions?.includes(permission)),
-      hasFeature: (feature: string) =>
-        user?.role === 'SUPER_ADMIN' || Boolean(user?.features?.includes(feature)),
-    }),
-    [status, user, dashboards, signIn, signOut, adoptSession, applyProfile]
+  const adoptSession = useCallback(() => {
+    setLost(null)
+    router.refresh()
+  }, [router])
+
+  const refresh = useCallback(async () => {
+    router.refresh()
+  }, [router])
+
+  const value = useMemo<AuthControl>(
+    () => ({ lost, renew, settle, track, signIn, signOut, adoptSession, refresh }),
+    [lost, renew, settle, track, signIn, signOut, adoptSession, refresh]
   )
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return <AuthControlContext.Provider value={value}>{children}</AuthControlContext.Provider>
 }

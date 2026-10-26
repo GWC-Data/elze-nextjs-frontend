@@ -1,3 +1,5 @@
+'use client'
+
 import type { ComponentType } from 'react'
 import { Link, useLocation, useNavigate } from '@/lib/router'
 import { ArrowLeft, Bot, ChevronRight, Home, LayoutDashboard, Network } from 'lucide-react'

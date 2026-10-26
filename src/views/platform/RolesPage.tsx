@@ -1,3 +1,5 @@
+'use client'
+
 import { useMemo, useState } from 'react'
 import { Loader2, Lock } from 'lucide-react'
 import {

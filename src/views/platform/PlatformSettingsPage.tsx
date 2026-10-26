@@ -1,3 +1,5 @@
+'use client'
+
 import { CheckCircle2, RefreshCw, ShieldCheck } from 'lucide-react'
 import { fetchPlatformSettings } from '@/api/platform.api'
 import { fetchHealth } from '@/api/workspace.api'

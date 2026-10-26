@@ -1,12 +1,11 @@
-'use client'
-
 import View from '@/views/workspace/CompanySettingsPage'
-import { RouteView } from '@/router/RouteView'
+import { ServerRoute } from '@/server/ServerRoute'
+import { PAGE_ABILITIES } from '@/constants/pageAbilities'
 
 export default function Page() {
   return (
-    <RouteView routePath="/settings/company" home="/workspace" permission={"company.read"}>
+    <ServerRoute routePath="/settings/company" home="/workspace" permission={"company.read"} abilities={PAGE_ABILITIES.CompanySettingsPage}>
       <View />
-    </RouteView>
+    </ServerRoute>
   )
 }

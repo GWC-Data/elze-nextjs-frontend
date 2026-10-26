@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { listCompanyOptions } from '@/api/platform.api'
@@ -15,7 +17,7 @@ export type PeopleScope = 'platform' | 'team'
 export default function PeoplePage({ scope }: { scope: PeopleScope }) {
   const { can, user } = useAuth()
   const [adding, setAdding] = useState(false)
-  const [companyFilter, setCompanyFilter] = useState<number | null>(null)
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
   const isPlatform = scope === 'platform'
@@ -78,7 +80,7 @@ export default function PeoplePage({ scope }: { scope: PeopleScope }) {
             activate: (person) => api.activate(person.id),
             deactivate: (person) => api.deactivate(person.id),
             resendInvitation: (person) => api.resendActivation(person.id),
-            remove: (person) => api.remove(person.id),
+            remove: (person, options) => api.remove(person.id, options),
           }}
           empty={{ ...empty, action: canCreate ? addButton : undefined }}
         />

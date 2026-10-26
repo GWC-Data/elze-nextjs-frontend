@@ -1,12 +1,10 @@
-'use client'
-
 import View from '@/views/platform/PlatformSettingsPage'
-import { RouteView } from '@/router/RouteView'
+import { ServerRoute } from '@/server/ServerRoute'
 
 export default function Page() {
   return (
-    <RouteView routePath="settings" home="/platform">
+    <ServerRoute routePath="settings" home="/platform">
       <View />
-    </RouteView>
+    </ServerRoute>
   )
 }

@@ -5,8 +5,10 @@ import { useAuth } from '@/context/authContext'
 import { usePaths } from '@/hooks/usePaths'
 import { DataTable, type ColumnDef } from '@/components/common/DataTable'
 import { RoleBadge, StatusBadge } from '@/components/common/Badges'
-import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { DeleteConfirmDialog } from '@/components/common/ConfirmDialog'
+import { ROLE_LABELS } from '@/constants/labels'
 import { notify } from '@/lib/notify'
+import type { DeleteOptions } from '@/api/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -27,13 +29,13 @@ import { useServerList } from '@/hooks/useServerList'
 import type { CompanyOption, ListQuery, Paged, UserListItem } from '@/types/admin'
 import type { RoleName, UserStatus } from '@/types/auth'
 
-export type PeopleQuery = ListQuery & { role?: string; status?: string; companyId?: number }
+export type PeopleQuery = ListQuery & { role?: string; status?: string; companyId?: string }
 
 export interface PeopleActions {
   activate: (user: UserListItem) => Promise<unknown>
   deactivate: (user: UserListItem) => Promise<unknown>
   resendInvitation: (user: UserListItem) => Promise<unknown>
-  remove: (user: UserListItem) => Promise<unknown>
+  remove: (user: UserListItem, options?: DeleteOptions) => Promise<unknown>
 }
 
 const ALL = '__all__'
@@ -60,8 +62,8 @@ export function PeopleDirectory({
   actions: PeopleActions
   showCompany?: boolean
   companies?: CompanyOption[]
-  companyFilter?: number | null
-  onCompanyFilterChange?: (companyId: number | null) => void
+  companyFilter?: string | null
+  onCompanyFilterChange?: (companyId: string | null) => void
   empty: { title: string; body?: string; action?: React.ReactNode }
 }) {
   const { user: me } = useAuth()
@@ -73,7 +75,13 @@ export function PeopleDirectory({
   const [statusFilter, setStatusFilter] = useState<string>(ALL)
   const [removing, setRemoving] = useState<UserListItem | null>(null)
   const [removePending, setRemovePending] = useState(false)
-  const [busyId, setBusyId] = useState<number | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const roleOptions: RoleName[] = [
+    ...(showCompany && me?.role === 'SUPER_ADMIN' ? (['SUPER_ADMIN', 'PLATFORM_ADMIN'] as RoleName[]) : []),
+    'COMPANY_ADMIN',
+    'USER',
+  ]
 
   const list = useServerList<UserListItem, Omit<PeopleQuery, keyof ListQuery>>(
     load,
@@ -103,12 +111,12 @@ export function PeopleDirectory({
     }
   }
 
-  const confirmRemove = async () => {
+  const confirmRemove = async (permanent: boolean) => {
     if (!removing) return
     setRemovePending(true)
     try {
-      await actions.remove(removing)
-      notify.success(`${removing.username} has been deleted.`)
+      await actions.remove(removing, { permanent })
+      notify.success(`${removing.username} has been ${permanent ? 'permanently deleted' : 'deleted'}.`)
       onChanged()
       setRemoving(null)
     } catch (err) {
@@ -300,9 +308,9 @@ export function PeopleDirectory({
           <>
             {companies && onCompanyFilterChange && (
               <Select
-                value={companyFilter === null || companyFilter === undefined ? ALL : String(companyFilter)}
+                value={companyFilter ?? ALL}
                 onValueChange={(value) =>
-                  onCompanyFilterChange(value === ALL ? null : Number(value))
+                  onCompanyFilterChange(value === ALL ? null : value)
                 }
               >
                 <SelectTrigger size="lg" className="w-44" aria-label="Filter by company">
@@ -311,7 +319,7 @@ export function PeopleDirectory({
                 <SelectContent>
                   <SelectItem value={ALL}>All companies</SelectItem>
                   {companies.map((company) => (
-                    <SelectItem key={company.id} value={String(company.id)}>
+                    <SelectItem key={company.id} value={company.id}>
                       {company.name}
                     </SelectItem>
                   ))}
@@ -325,16 +333,9 @@ export function PeopleDirectory({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>All roles</SelectItem>
-                {(showCompany
-                  ? (['SUPER_ADMIN', 'COMPANY_ADMIN', 'USER'] as RoleName[])
-                  : (['COMPANY_ADMIN', 'USER'] as RoleName[])
-                ).map((role) => (
+                {roleOptions.map((role) => (
                   <SelectItem key={role} value={role}>
-                    {role === 'SUPER_ADMIN'
-                      ? 'Platform owner'
-                      : role === 'COMPANY_ADMIN'
-                        ? 'Company admin'
-                        : 'Member'}
+                    {ROLE_LABELS[role]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -357,16 +358,15 @@ export function PeopleDirectory({
         }
       />
 
-      <ConfirmDialog
+      <DeleteConfirmDialog
         open={removing !== null}
         onOpenChange={(open) => !open && setRemoving(null)}
         title={removing ? `Delete ${removing.username}?` : ''}
-        body="This removes the account permanently, along with its access and its sessions. It cannot be undone."
+        body="The account is removed from every list and its sessions end. Its username and email can be used again."
         consequence="If this person should simply stop having access, deactivate them instead. That keeps the record and can be reversed."
         confirmLabel="Delete account"
-        destructive
         pending={removePending}
-        onConfirm={confirmRemove}
+        onConfirm={(permanent) => void confirmRemove(permanent)}
       />
     </>
   )

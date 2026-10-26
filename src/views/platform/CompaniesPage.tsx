@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { useNavigate } from '@/lib/router'
 import { Plus } from 'lucide-react'
@@ -68,17 +70,21 @@ export default function CompaniesPage() {
         <span className="tabular-nums">{(company.userCount ?? 0).toLocaleString()}</span>
       ),
     },
-    {
-      key: 'dashboards',
-      header: 'Dashboards',
-      align: 'right',
-      width: 'w-28',
-      secondary: true,
-      serverSort: 'dashboards',
-      render: (company) => (
-        <span className="tabular-nums">{(company.dashboardCount ?? 0).toLocaleString()}</span>
-      ),
-    },
+    ...(SHOW_ANALYTICS
+      ? [
+          {
+            key: 'dashboards',
+            header: 'Dashboards',
+            align: 'right',
+            width: 'w-28',
+            secondary: true,
+            serverSort: 'dashboards',
+            render: (company: Company) => (
+              <span className="tabular-nums">{(company.dashboardCount ?? 0).toLocaleString()}</span>
+            ),
+          } satisfies ColumnDef<Company>,
+        ]
+      : []),
     {
       key: 'created',
       header: 'Onboarded',

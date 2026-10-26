@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { KeyRound, LogOut, Monitor, ShieldCheck } from 'lucide-react'
 import { fetchSessions } from '@/api/auth.api'

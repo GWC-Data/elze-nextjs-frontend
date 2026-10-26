@@ -1,4 +1,5 @@
-import { contextHttp } from '@/api/client'
+import { contextHttp, deleteConfig } from '@/api/client'
+import type { DeleteOptions, DeleteResult } from '@/api/client'
 import { endpoints, versionParams } from '@/api/endpoints'
 import type {
   Connection,
@@ -41,7 +42,7 @@ export function createConnection(body: {
   name: string
   host: string
   token: string
-  companyId?: number
+  companyId?: string
   limit?: number
 }): Promise<CreatedConnection> {
   return contextHttp.post<CreatedConnection>(endpoints.context.connections(), body)
@@ -59,6 +60,6 @@ export function verifyConnection(id: string): Promise<{ connection: Connection }
   return contextHttp.post<{ connection: Connection }>(endpoints.context.verifyConnection(id))
 }
 
-export function deleteConnection(id: string): Promise<{ deleted: true }> {
-  return contextHttp.delete<{ deleted: true }>(endpoints.context.connection(id))
+export function deleteConnection(id: string, options?: DeleteOptions): Promise<DeleteResult> {
+  return contextHttp.delete<DeleteResult>(endpoints.context.connection(id), deleteConfig(options))
 }

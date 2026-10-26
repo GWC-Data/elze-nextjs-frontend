@@ -19,7 +19,7 @@ export type ContextAccessLevel = 'view' | 'edit' | 'full'
 export type GeneralAccess = 'restricted' | 'company'
 
 export interface ContextOwner {
-  id: number
+  id: string
   name: string | null
 }
 
@@ -32,7 +32,7 @@ export interface ContextAccess {
 }
 
 export interface ContextSharePerson {
-  userId: number
+  userId: string
   username: string
   email: string
   displayName: string | null
@@ -54,7 +54,7 @@ export interface ContextShareGrant extends ContextSharePerson {
 }
 
 export interface ContextShareGroup {
-  groupId: number
+  groupId: string
   name: string
   memberCount: number
 }
@@ -88,7 +88,7 @@ export interface GroupSharedContext {
 
 export interface Connection {
   id: string
-  companyId: number
+  companyId: string
   provider: string
   name: string
   host: string
@@ -166,7 +166,7 @@ export interface PublishedContextGroup {
   connectionName: string
   provider: string
   host: string
-  companyId: number | null
+  companyId: string | null
   companyName: string | null
   name: string
   access?: ContextAccess | null
@@ -448,7 +448,7 @@ export interface PublishSummary {
     name: string
     label: string
     publishedAt: string
-    publishedBy: number | null
+    publishedBy: string | null
     objectCount: number
   } | null
   suggestedName: string
@@ -474,7 +474,7 @@ export interface PublishedVersion {
   sessionId: string | null
   objectCount: number
   stats: Record<string, unknown>
-  publishedBy: number | null
+  publishedBy: string | null
   publishedAt: string
 }
 
@@ -504,10 +504,10 @@ export interface ContextVersion {
   extractedAt: string | null
   objectCount: number
   stats: Record<string, unknown>
-  createdBy: number | null
+  createdBy: string | null
   createdAt: string
   updatedAt: string
-  publishedBy: number | null
+  publishedBy: string | null
   publishedAt: string | null
 }
 
@@ -586,7 +586,7 @@ export interface ContextProfile {
   connectionId: string
   name: string
   description: string | null
-  createdBy: number | null
+  createdBy: string | null
   createdAt: string
   updatedAt: string
 }

@@ -1,3 +1,5 @@
+'use client'
+
 import { useId, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { useNavigate, useParams } from '@/lib/router'

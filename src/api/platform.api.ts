@@ -1,7 +1,9 @@
-import { del, get, patch, post, put } from '@/api/client'
+import { del, deleteConfig, get, patch, post, put } from '@/api/client'
+import type { DeleteOptions, DeleteResult } from '@/api/client'
 import { endpoints } from '@/api/endpoints'
 import { platformUsers } from '@/api/users.api'
 import type {
+  AssignableRoles,
   Company,
   CompanyFeatures,
   CompanyOption,
@@ -36,7 +38,7 @@ export function listCompanyOptions(): Promise<CompanyOption[]> {
   return value
 }
 
-export function fetchCompany(id: number): Promise<Company> {
+export function fetchCompany(id: string): Promise<Company> {
   return get<Company>(endpoints.platform.company(id))
 }
 
@@ -45,37 +47,37 @@ export function createCompany(body: NewCompany): Promise<Company> {
   return post<Company>(endpoints.platform.companies, body)
 }
 
-export function updateCompany(id: number, body: { name?: string; active?: boolean }): Promise<Company> {
+export function updateCompany(id: string, body: { name?: string; active?: boolean }): Promise<Company> {
   invalidateCompanyOptions()
   return patch<Company>(endpoints.platform.company(id), body)
 }
 
-export function deleteCompany(id: number): Promise<{ deleted: true }> {
+export function deleteCompany(id: string, options?: DeleteOptions): Promise<DeleteResult> {
   invalidateCompanyOptions()
-  return del<{ deleted: true }>(endpoints.platform.company(id))
+  return del<DeleteResult>(endpoints.platform.company(id), deleteConfig(options))
 }
 
 export function listFeatures(): Promise<FeatureDef[]> {
   return get<FeatureDef[]>(endpoints.platform.features)
 }
 
-export function fetchCompanyFeatures(companyId: number): Promise<CompanyFeatures> {
+export function fetchCompanyFeatures(companyId: string): Promise<CompanyFeatures> {
   return get<CompanyFeatures>(endpoints.platform.companyFeatures(companyId))
 }
 
-export function saveCompanyFeatures(companyId: number, featureIds: string[]): Promise<CompanyFeatures> {
+export function saveCompanyFeatures(companyId: string, featureIds: string[]): Promise<CompanyFeatures> {
   return put<CompanyFeatures>(endpoints.platform.companyFeatures(companyId), { featureIds })
 }
 
-export function listCompanyDashboards(companyId: number): Promise<DashboardSummary[]> {
+export function listCompanyDashboards(companyId: string): Promise<DashboardSummary[]> {
   return get<DashboardSummary[]>(endpoints.platform.companyDashboards(companyId))
 }
 
-export function assignDashboard(companyId: number, dashboardId: string): Promise<unknown> {
+export function assignDashboard(companyId: string, dashboardId: string): Promise<unknown> {
   return put(endpoints.platform.companyDashboard(companyId, dashboardId))
 }
 
-export function unassignDashboard(companyId: number, dashboardId: string): Promise<unknown> {
+export function unassignDashboard(companyId: string, dashboardId: string): Promise<unknown> {
   return del(endpoints.platform.companyDashboard(companyId, dashboardId))
 }
 
@@ -90,6 +92,12 @@ export const deleteUser = platformUsers.remove
 
 export function listRoles(): Promise<Role[]> {
   return get<Role[]>(endpoints.platform.roles)
+}
+
+export function fetchAssignableRoles(companyId?: string | null): Promise<AssignableRoles> {
+  return get<AssignableRoles>(endpoints.platform.assignableRoles, {
+    params: companyId ? { companyId } : undefined,
+  })
 }
 
 export function listPermissions(): Promise<PermissionDef[]> {

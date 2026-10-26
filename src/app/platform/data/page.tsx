@@ -1,12 +1,10 @@
-'use client'
-
 import View from '@/views/DataPage'
-import { RouteView } from '@/router/RouteView'
+import { ServerRoute } from '@/server/ServerRoute'
 
 export default function Page() {
   return (
-    <RouteView routePath="data" home="/platform" permission={"data.read"}>
+    <ServerRoute routePath="data" home="/platform" permission={"data.read"}>
       <View />
-    </RouteView>
+    </ServerRoute>
   )
 }

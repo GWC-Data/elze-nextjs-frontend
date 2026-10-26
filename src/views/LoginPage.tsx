@@ -1,7 +1,10 @@
+'use client'
+
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Loader2, LogIn } from 'lucide-react'
 import { useAuth } from '@/context/authContext'
+import { Link } from '@/lib/router'
 import AuthLayout from '@/layouts/AuthLayout'
 import { Button } from '@/components/ui/button'
 import { FormError, PasswordField, TextField } from '@/components/common/Fields'
@@ -60,6 +63,14 @@ export default function LoginPage() {
           autoComplete="current-password"
           disabled={pending}
         />
+        <div className="-mt-2 flex justify-end">
+          <Link
+            to="/forgot-password"
+            className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Forgot password?
+          </Link>
+        </div>
 
         {error && <FormError message={error} />}
 

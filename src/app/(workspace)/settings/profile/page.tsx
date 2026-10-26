@@ -1,12 +1,10 @@
-'use client'
-
 import View from '@/views/ProfilePage'
-import { RouteView } from '@/router/RouteView'
+import { ServerRoute } from '@/server/ServerRoute'
 
 export default function Page() {
   return (
-    <RouteView routePath="/settings/profile" home="/workspace">
+    <ServerRoute routePath="/settings/profile" home="/workspace">
       <View />
-    </RouteView>
+    </ServerRoute>
   )
 }

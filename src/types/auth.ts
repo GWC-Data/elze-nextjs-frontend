@@ -1,8 +1,8 @@
 export type UserStatus = 'pending' | 'active' | 'disabled'
 
 export interface AuthUser {
-  id: number
-  companyId: number | null
+  id: string
+  companyId: string | null
   companyName: string | null
   username: string
   email: string
@@ -17,11 +17,9 @@ export interface AuthUser {
   mustChangePassword: boolean
   lastLoginAt: string | null
   createdAt: string | null
-  permissions: string[]
-  features?: string[]
 }
 
-export type RoleName = 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'USER'
+export type RoleName = 'SUPER_ADMIN' | 'PLATFORM_ADMIN' | 'COMPANY_ADMIN' | 'USER'
 
 export type RoleKind = 'system' | 'company_default' | 'custom'
 
@@ -48,9 +46,9 @@ export interface AccessibleDashboard {
   accessLevel: AccessLevel
 }
 
-export interface Profile {
-  state: 'AUTHENTICATED' | 'PASSWORD_CHANGE_REQUIRED'
-  user: AuthUser
+export interface ClientSession {
+  status: 'AUTHENTICATED' | 'PASSWORD_CHANGE_REQUIRED' | 'RESTORING' | 'UNAUTHENTICATED'
+  user: AuthUser | null
   dashboards: AccessibleDashboard[]
 }
 
@@ -66,3 +64,5 @@ export interface ActivationTarget {
   displayName: string | null
   companyName: string | null
 }
+
+export type ResetTarget = ActivationTarget

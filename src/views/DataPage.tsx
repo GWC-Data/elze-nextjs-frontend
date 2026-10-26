@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { Database, Hash, Tags } from 'lucide-react'
 import { fetchColumns } from '@/api/dashboard.api'

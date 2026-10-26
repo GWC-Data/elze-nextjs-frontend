@@ -1,3 +1,5 @@
+'use client'
+
 import { useLocation, useNavigate, useParams } from "@/lib/router"
 
 import { usePaths } from "@/hooks/usePaths"

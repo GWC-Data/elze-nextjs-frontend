@@ -1,12 +1,11 @@
-'use client'
-
 import View from '@/views/DashboardPage'
-import { RouteView } from '@/router/RouteView'
+import { ServerRoute } from '@/server/ServerRoute'
+import { PAGE_ABILITIES } from '@/constants/pageAbilities'
 
 export default function Page() {
   return (
-    <RouteView routePath="/dashboards/:dashboardId" home="/workspace" permission={"dashboard.read"}>
+    <ServerRoute routePath="/dashboards/:dashboardId" home="/workspace" permission={"dashboard.read"} abilities={PAGE_ABILITIES.DashboardPage}>
       <View />
-    </RouteView>
+    </ServerRoute>
   )
 }

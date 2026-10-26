@@ -1,3 +1,5 @@
+'use client'
+
 import { useParams } from '@/lib/router'
 import { platformUsers, teamUsers } from '@/api/users.api'
 import { useAsync } from '@/hooks/useAsync'
@@ -7,6 +9,7 @@ import { PersonDetail } from '@/components/common/people/PersonDetail'
 import { RoleBadge, StatusBadge } from '@/components/common/Badges'
 import { CardGridSkeleton, ErrorState, NotFoundState } from '@/components/common/States'
 import { Badge } from '@/components/ui/badge'
+import { isUuid } from '@/lib/utils'
 import type { PeopleScope } from '@/views/PeoplePage'
 
 const LABELS = {
@@ -15,13 +18,12 @@ const LABELS = {
 } as const
 
 export default function PersonPage({ scope }: { scope: PeopleScope }) {
-  const { userId: userIdParam } = useParams()
-  const userId = Number(userIdParam)
+  const { userId } = useParams()
   const paths = usePaths()
   const api = scope === 'platform' ? platformUsers : teamUsers
   const labels = LABELS[scope]
 
-  const valid = Number.isInteger(userId) && userId > 0
+  const valid = isUuid(userId)
   const person = useAsync(
     () => (valid ? api.fetch(userId) : Promise.reject(new Error('invalid id'))),
     [userId, valid, api]

@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ChevronDown, ChevronsUpDown, Gem, LogOut } from 'lucide-react'
 import { NavLink, useLocation, useNavigate } from '@/lib/router'
 import { useAuth } from '@/context/authContext'
 import { usePaths } from '@/hooks/usePaths'
-import { accountMenuFor, isNavItemActive, navigationFor } from '@/constants/navigation'
+import { accountMenuWithin, isNavItemActive, navigationWithin } from '@/constants/navigation'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -32,9 +32,9 @@ import {
 } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import { ElzeMark } from '@/components/common/ElzeMark'
-import { PlatformTenantSwitcher } from '@/layouts/PlatformTenantSwitcher'
 
 export interface AppSidebarProps {
+  navigation: string[]
   onNavigate?: () => void
 }
 
@@ -58,6 +58,7 @@ function writeCollapsed(value: Set<string>) {
   try {
     window.localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...value]))
   } catch {
+    return
   }
 }
 
@@ -71,16 +72,17 @@ function initials(name: string): string {
     .toUpperCase()
 }
 
-export function AppSidebar({ onNavigate }: AppSidebarProps = {}) {
-  const { can, user, signOut } = useAuth()
+export function AppSidebar({ navigation, onNavigate }: AppSidebarProps) {
+  const { user, signOut } = useAuth()
   const paths = usePaths()
   const { pathname } = useLocation()
   const { setOpenMobile, isMobile, state } = useSidebar()
   const [collapsed, setCollapsed] = useState<Set<string>>(readCollapsed)
   const [signingOut, setSigningOut] = useState(false)
 
-  const groups = navigationFor(paths, can, user?.role)
-  const accountItems = accountMenuFor(paths, can)
+  const allowed = useMemo(() => new Set(navigation), [navigation])
+  const groups = navigationWithin(paths, allowed, user?.role)
+  const accountItems = accountMenuWithin(paths, allowed)
   const navigate = useNavigate()
   const platform = paths.shell === 'platform'
   const iconRail = state === 'collapsed' && !isMobile
@@ -121,11 +123,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps = {}) {
           </div>
           <SidebarTrigger />
         </div>
-        {platform ? (
-          <div className="mt-2 group-data-[collapsible=icon]:hidden">
-            <PlatformTenantSwitcher />
-          </div>
-        ) : null}
       </SidebarHeader>
 
       <SidebarContent>

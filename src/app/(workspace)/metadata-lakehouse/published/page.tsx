@@ -1,12 +1,11 @@
-'use client'
-
 import View from '@/views/metadata-lakehouse/MetadataLakehousePage'
-import { RouteView } from '@/router/RouteView'
+import { ServerRoute } from '@/server/ServerRoute'
+import { PAGE_ABILITIES } from '@/constants/pageAbilities'
 
 export default function Page() {
   return (
-    <RouteView routePath="/metadata-lakehouse/published" home="/workspace" permission={"context.read"}>
+    <ServerRoute routePath="/metadata-lakehouse/published" home="/workspace" permission={"context.read"} abilities={PAGE_ABILITIES.MetadataLakehousePage}>
       <View view="published" />
-    </RouteView>
+    </ServerRoute>
   )
 }

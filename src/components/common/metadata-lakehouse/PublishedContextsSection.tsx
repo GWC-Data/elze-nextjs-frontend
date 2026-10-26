@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ErrorState } from '@/components/common/States'
-import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { DeleteConfirmDialog } from '@/components/common/ConfirmDialog'
 import { notify } from '@/lib/notify'
 import { cn } from '@/lib/utils'
 import { useCompanyPublished, useCreateVersion, useDeleteVersion } from '@/hooks/useMetadataLakehouse'
@@ -145,11 +145,14 @@ function PublishedContextCard({
   const shown = showAll ? group.versions : group.versions.slice(0, PREVIEW)
   const nextLive = group.versions.find((v) => !v.live) ?? null
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (permanent: boolean) => {
     if (!deleting) return
     try {
-      await remove.mutateAsync({ connectionId: group.connectionId, versionId: deleting.id })
-      notify.success(`${group.name} ${deleting.label} was deleted.`, 'Every other version is unchanged.')
+      await remove.mutateAsync({ connectionId: group.connectionId, versionId: deleting.id, permanent })
+      notify.success(
+        `${group.name} ${deleting.label} was ${permanent ? 'permanently deleted' : 'deleted'}.`,
+        'Every other version is unchanged.'
+      )
       setDeleting(null)
     } catch (err) {
       notify.failure(`delete ${group.name} ${deleting.label}`, err)
@@ -308,7 +311,7 @@ function PublishedContextCard({
         ) : null}
       </div>
 
-      <ConfirmDialog
+      <DeleteConfirmDialog
         open={deleting !== null}
         onOpenChange={(open) => !open && setDeleting(null)}
         title={deleting ? `Delete ${group.name} ${deleting.label}?` : ''}
@@ -327,9 +330,8 @@ function PublishedContextCard({
             : undefined
         }
         confirmLabel={deleting ? `Delete ${deleting.label}` : 'Delete'}
-        destructive
         pending={remove.isPending}
-        onConfirm={confirmDelete}
+        onConfirm={(permanent) => void confirmDelete(permanent)}
       />
     </article>
   )

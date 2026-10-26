@@ -19,7 +19,7 @@ export function CompanyRoleSelect({
   onChange,
   disabled,
 }: {
-  companyId: number | null
+  companyId: string | null
   value: string | null
   onChange: (roleId: string | null) => void
   disabled?: boolean

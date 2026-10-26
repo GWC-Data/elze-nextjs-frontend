@@ -1,12 +1,11 @@
-'use client'
-
 import View from '@/views/PersonPage'
-import { RouteView } from '@/router/RouteView'
+import { ServerRoute } from '@/server/ServerRoute'
+import { PAGE_ABILITIES } from '@/constants/pageAbilities'
 
 export default function Page() {
   return (
-    <RouteView routePath="users/:userId" home="/platform" permission={"user.read"}>
+    <ServerRoute routePath="users/:userId" home="/platform" permission={"user.read"} abilities={PAGE_ABILITIES.PersonPage}>
       <View scope="platform" />
-    </RouteView>
+    </ServerRoute>
   )
 }

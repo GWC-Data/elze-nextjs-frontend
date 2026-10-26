@@ -1,12 +1,11 @@
-'use client'
-
 import View from '@/views/agent/LibraryAgentChatPage'
-import { RouteView } from '@/router/RouteView'
+import { ServerRoute } from '@/server/ServerRoute'
+import { PAGE_ABILITIES } from '@/constants/pageAbilities'
 
 export default function Page() {
   return (
-    <RouteView routePath="agents/:agentId/chat/:sessionId" home="/platform" permission={"agent.read"}>
+    <ServerRoute routePath="agents/:agentId/chat/:sessionId" home="/platform" permission={"agent.read"} abilities={PAGE_ABILITIES.LibraryAgentChatPage}>
       <View />
-    </RouteView>
+    </ServerRoute>
   )
 }

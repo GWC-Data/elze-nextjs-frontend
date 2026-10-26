@@ -79,7 +79,7 @@ function ShareBody({
   const [personId, setPersonId] = useState('')
   const [level, setLevel] = useState<AccessLevel>('view')
   const [adding, setAdding] = useState(false)
-  const [pendingUser, setPendingUser] = useState<number | null>(null)
+  const [pendingUser, setPendingUser] = useState<string | null>(null)
 
   if (grants.error) {
     return <ErrorState error={grants.error} onRetry={grants.reload} compact />
@@ -101,15 +101,15 @@ function ShareBody({
   const candidates = (people.data ?? []).filter((p) => !holderIds.has(p.id) && p.id !== myId)
   const effectiveLevel = allowed.includes(level) ? level : allowed[0]
 
-  const mayTouch = (userId: number, theirLevel: AccessLevel) =>
+  const mayTouch = (userId: string, theirLevel: AccessLevel) =>
     administrator || (userId !== myId && levelAtLeast(myLevel, theirLevel))
 
   const add = async () => {
     if (!personId) return
     setAdding(true)
     try {
-      await grantUserAccess(dashboardId, Number(personId), effectiveLevel)
-      const name = candidates.find((p) => String(p.id) === personId)?.username ?? 'They'
+      await grantUserAccess(dashboardId, personId, effectiveLevel)
+      const name = candidates.find((p) => p.id === personId)?.username ?? 'They'
       notify.success(`${name} ${ACCESS_LEVEL_LABELS[effectiveLevel].toLowerCase()} this dashboard.`)
       setPersonId('')
       grants.reload()
@@ -120,7 +120,7 @@ function ShareBody({
     }
   }
 
-  const act = async (userId: number, work: () => Promise<unknown>, message: string, failure: string) => {
+  const act = async (userId: string, work: () => Promise<unknown>, message: string, failure: string) => {
     setPendingUser(userId)
     try {
       await work()
@@ -155,7 +155,7 @@ function ShareBody({
               </SelectTrigger>
               <SelectContent>
                 {candidates.map((p) => (
-                  <SelectItem key={p.id} value={String(p.id)}>
+                  <SelectItem key={p.id} value={p.id}>
                     {p.username}
                     {p.email ? <span className="text-muted-foreground"> · {p.email}</span> : null}
                   </SelectItem>
