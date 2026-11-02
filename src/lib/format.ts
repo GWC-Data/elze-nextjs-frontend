@@ -26,6 +26,17 @@ export function formatExact(value: number | null | undefined): string {
   return value.toLocaleString('en-US')
 }
 
+const CREDITS = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
+
+export function formatCredits(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return EMPTY
+  return CREDITS.format(value)
+}
+
+export function creditLabel(value: number): string {
+  return `${CREDITS.format(value)} ${value === 1 ? 'credit' : 'credits'}`
+}
+
 export function formatConfidence(value: number | null | undefined): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return EMPTY
   const ratio = value > 1 ? value / 100 : value

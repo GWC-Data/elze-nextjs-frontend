@@ -67,6 +67,7 @@ const CATEGORY_OPTIONS: { value: AuditCategory; label: string }[] = [
   { value: 'people', label: 'People, groups & roles' },
   ...(SHOW_ANALYTICS ? [{ value: 'dashboards' as AuditCategory, label: 'Dashboards & access' }] : []),
   { value: 'companies', label: 'Companies' },
+  { value: 'credits', label: 'Credits' },
 ]
 
 const ACTION_OPTIONS: { value: AuditAction; label: string }[] = [

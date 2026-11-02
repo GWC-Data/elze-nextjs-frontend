@@ -7,9 +7,7 @@ export const CONTEXT_API_BASE_URL: string =
 
 export const IS_SAME_ORIGIN_API = CONTEXT_API_BASE_URL.startsWith('/')
 
-export const ADK_API_BASE_URL: string = process.env.NEXT_PUBLIC_ADK_API_BASE_URL || 'http://127.0.0.1:7070'
-
-export const ADK_API_KEY: string = process.env.NEXT_PUBLIC_ADK_API_KEY || ''
+export const ADK_API_BASE_URL = '/svc/adk'
 
 const RAW_AGENT_LIBRARY_API_URL = process.env.NEXT_PUBLIC_AGENT_LIBRARY_API_URL
 

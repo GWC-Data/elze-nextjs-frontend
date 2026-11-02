@@ -102,7 +102,7 @@ export default function ArchitecturePage() {
               title="AI Agents"
               body="Turn repeatable analyses into playbooks that run on a schedule and report back automatically."
               cta="Go to playbooks"
-              to={paths.playbooks()}
+              to={paths.playbooks}
             />
             {SHOW_ANALYTICS && (
               <OutletCard

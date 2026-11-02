@@ -2,7 +2,7 @@ import { get } from '@/api/client'
 import { endpoints } from '@/api/endpoints'
 import type { AuditLogPage, ListQuery } from '@/types/admin'
 
-export type AuditCategory = 'company' | 'lakehouse' | 'auth' | 'people' | 'dashboards' | 'companies'
+export type AuditCategory = 'company' | 'lakehouse' | 'auth' | 'people' | 'dashboards' | 'companies' | 'credits'
 
 export type AuditAction = 'create' | 'update' | 'delete'
 

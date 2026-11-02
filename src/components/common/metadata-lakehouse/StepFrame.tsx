@@ -14,6 +14,7 @@ export function StepFrame({
   children,
   nextDisabled,
   nextLabel,
+  nextExtra,
   nextPending,
   onNext,
   hideNext,
@@ -31,6 +32,7 @@ export function StepFrame({
   children: ReactNode
   nextDisabled?: boolean
   nextLabel?: string
+  nextExtra?: ReactNode
   nextPending?: boolean
   onNext?: () => void | boolean | Promise<void | boolean>
   hideNext?: boolean
@@ -95,6 +97,7 @@ export function StepFrame({
                 ) : (
                   <>
                     {readOnly ? 'Next' : (nextLabel ?? 'Next')}
+                    {readOnly ? null : nextExtra}
                     <ArrowRight className="size-4" aria-hidden />
                   </>
                 )}

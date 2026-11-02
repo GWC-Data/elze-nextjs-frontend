@@ -18,6 +18,7 @@ export const PAGE_ABILITIES = {
   ],
   CompanyRolesPage: ['delete.permanent', 'role.create', 'role.delete', 'role.edit'],
   CompanySettingsPage: ['company.update'],
+  CreditsPage: ['credits.manage'],
   DashboardPage: ['access.grant', 'dashboard.delete', 'dashboard.update', 'delete.permanent'],
   DashboardsPage: ['access.grant', 'dashboard.create', 'dashboard.delete', 'delete.permanent'],
   DataAnalystPage: ['context.read'],
@@ -48,6 +49,6 @@ export const PAGE_ABILITIES = {
     'scope.update',
     ...USER_ACTIONS,
   ],
-  PlaybooksPage: ['playbook.create', 'playbook.run', 'playbook.update'],
+  PlatformCreditsPage: ['credits.allocate', 'credits.manage'],
   RolesPage: ['role.update'],
 } as const satisfies Record<string, readonly string[]>

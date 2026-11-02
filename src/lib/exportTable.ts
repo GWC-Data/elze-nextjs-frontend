@@ -18,7 +18,7 @@ function csvEscape(value: unknown): string {
   return /[",\r\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
 }
 
-function triggerDownload(blob: Blob, filename: string) {
+export function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
   link.href = url

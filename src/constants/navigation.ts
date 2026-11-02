@@ -8,9 +8,11 @@ import {
   CircleCheck,
   FilePen,
   Database,
+  Coins,
   KeyRound,
   LayoutDashboard,
   Layers,
+  ListChecks,
   Home,
   Network,
   History,
@@ -21,6 +23,7 @@ import {
   UserCircle,
   Users,
   UsersRound,
+  Zap,
 } from 'lucide-react'
 import type { AppPaths } from '@/router/paths'
 
@@ -32,6 +35,7 @@ export interface NavItem {
   icon: LucideIcon
   permission?: string
   exact?: boolean
+  hidden?: boolean
   children?: NavItem[]
 }
 
@@ -77,6 +81,19 @@ function lakehouse(paths: AppPaths): NavItem {
   }
 }
 
+function playbooks(paths: AppPaths): NavItem {
+  return {
+    label: 'Playbooks',
+    path: paths.playbooks,
+    icon: BookOpen,
+    permission: 'playbook.read',
+    children: [
+      { label: 'Executions', path: paths.playbookExecutions, icon: ListChecks, permission: 'playbook.read' },
+      { label: 'Actions', path: paths.playbookActions, icon: Zap, permission: 'playbook.read' },
+    ],
+  }
+}
+
 function platformGroups(paths: AppPaths): NavGroup[] {
   return [
     {
@@ -91,8 +108,7 @@ function platformGroups(paths: AppPaths): NavGroup[] {
       items: [
         lakehouse(paths),
         { label: 'Data analyst', path: paths.dataAnalyst(), icon: Bot, permission: 'analyst.use' },
-        { label: 'Playbooks', path: paths.playbooks(), icon: BookOpen, permission: 'playbook.read' },
-        { label: 'Nexus Playbooks', path: paths.nexusPlaybooks, icon: BookOpen },
+        playbooks(paths),
         { label: 'Agents', path: paths.agentLibrary, icon: BrainCircuit, permission: 'agent.read' },
       ],
     },
@@ -108,6 +124,7 @@ function platformGroups(paths: AppPaths): NavGroup[] {
       items: [
         { label: 'Companies', path: paths.companies!, icon: Building2, permission: 'company.read' },
         { label: 'Users', path: paths.users, icon: Users, permission: 'user.read' },
+        { label: 'Credits', path: paths.credits, icon: Coins, permission: 'credits.allocate' },
       ],
     },
     {
@@ -141,8 +158,7 @@ function workspaceGroups(paths: AppPaths, role?: RoleName): NavGroup[] {
       items: [
         lakehouse(paths),
         { label: 'Data analyst', path: paths.dataAnalyst(), icon: Bot, permission: 'analyst.use' },
-        { label: 'Playbooks', path: paths.playbooks(), icon: BookOpen, permission: 'playbook.read' },
-        { label: 'Nexus Playbooks', path: paths.nexusPlaybooks, icon: BookOpen },
+        playbooks(paths),
         { label: 'Agents', path: paths.agentLibrary, icon: BrainCircuit, permission: 'agent.read' },
       ],
     },
@@ -160,6 +176,7 @@ function workspaceGroups(paths: AppPaths, role?: RoleName): NavGroup[] {
         { label: 'Roles', path: paths.roles!, icon: ShieldCheck, permission: 'role.read' },
         { label: 'Groups', path: paths.groups, icon: UsersRound, permission: 'group.read' },
         { label: 'Dashboard access', path: paths.access!, icon: KeyRound, permission: 'access.read' },
+        { label: 'Credits', path: paths.credits, icon: Coins, permission: 'credits.manage', hidden: true },
       ],
     },
     {
@@ -209,7 +226,8 @@ export function navigationPaths(paths: AppPaths, can: (permission: string) => bo
 }
 
 export function navigationWithin(paths: AppPaths, allowed: ReadonlySet<string>, role?: RoleName): NavGroup[] {
-  return visible(groupsFor(paths, role), listed(allowed))
+  const inList = listed(allowed)
+  return visible(groupsFor(paths, role), (item) => !item.hidden && inList(item))
 }
 
 export function accountMenuWithin(paths: AppPaths, allowed: ReadonlySet<string>): NavItem[] {

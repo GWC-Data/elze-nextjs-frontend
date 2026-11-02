@@ -60,6 +60,18 @@ export const endpoints = {
 
   audit: '/audit',
 
+  credits: {
+    me: '/credits/me',
+    rates: '/credits/rates',
+    rate: (action: string) => `/credits/rates/${enc(action)}`,
+    companies: '/credits/companies',
+    allocations: (companyId: string) => `/credits/companies/${enc(companyId)}/allocations`,
+    overview: '/credits/overview',
+    members: '/credits/members',
+    limit: (userId: string) => `/credits/members/${enc(userId)}/limit`,
+    activity: '/credits/activity',
+  },
+
   deletedItems: {
     root: '/deleted-items',
     one: (type: string, id: string) => `/deleted-items/${enc(type)}/${enc(id)}`,

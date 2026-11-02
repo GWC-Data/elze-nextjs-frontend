@@ -17,6 +17,7 @@ import { errorMessage } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { MarkdownText } from '@/components/common/agent/tools/MarkdownText'
 import { Hint } from '@/components/common/Hint'
+import { CreditCost } from '@/components/common/credits/CreditCost'
 import { useAuth } from '@/context/authContext'
 import {
   createDescriptionEditorSession,
@@ -510,6 +511,7 @@ export function UnderstandChatWidget({
               }}
             />
             <span className="ml-auto" />
+            {!isSending && <CreditCost action="context.chat" />}
             {isSending ? (
               <Hint label="Stop">
                 <Button

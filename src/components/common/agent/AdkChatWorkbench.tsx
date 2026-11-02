@@ -72,6 +72,7 @@ export interface AdkChatWorkbenchProps {
   reloadSessions: () => void
   onDeleteSession?: (sessionId: string) => Promise<void>
   composerAccessory?: React.ReactNode
+  sendAccessory?: React.ReactNode
   initialAutoSend?: string
 }
 
@@ -95,6 +96,7 @@ export function AdkChatWorkbench({
   reloadSessions,
   onDeleteSession,
   composerAccessory,
+  sendAccessory,
   initialAutoSend,
 }: AdkChatWorkbenchProps) {
   const navigate = useNavigate()
@@ -372,7 +374,10 @@ export function AdkChatWorkbench({
         <div className="mt-2 flex items-center gap-2">
           {attachButton}
           {composerAccessory}
-          <div className="ml-auto">{sendButton}</div>
+          <div className="ml-auto flex items-center gap-2">
+            {sendAccessory}
+            {sendButton}
+          </div>
         </div>
       </form>
     ) : (
@@ -382,6 +387,7 @@ export function AdkChatWorkbench({
         <div className="min-w-0 flex-1 rounded-[20px] border bg-background px-2.5 transition-colors focus-within:border-foreground/30">
           {messageBox(false)}
         </div>
+        {sendAccessory ? <div className="flex h-10 items-center">{sendAccessory}</div> : null}
         {sendButton}
       </form>
     )

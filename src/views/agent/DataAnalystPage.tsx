@@ -8,6 +8,7 @@ import { usePaths } from "@/hooks/usePaths"
 import { defaultConnectionId, newestFirst, rememberConnection, useAcrossConnections } from "@/hooks/useAcrossConnections"
 import { ContextQueryProvider } from "@/context/QueryProvider"
 import { AdkChatWorkbench } from "@/components/common/agent/AdkChatWorkbench"
+import { CreditCost } from "@/components/common/credits/CreditCost"
 import { ContextPicker, type PublishedContextOption } from "@/components/common/agent/ContextPicker"
 import { EmptyState, ErrorState, InlineLoading } from "@/components/common/States"
 import { useAuth } from "@/context/authContext"
@@ -140,6 +141,7 @@ function DataAnalyst() {
       onDeleteSession={(sid) =>
         deleteAdkSession(sessions?.find((s) => s.sessionId === sid)?.contextId ?? activeId, AGENT, sid)
       }
+      sendAccessory={<CreditCost action="analyst.question" />}
       composerAccessory={
         canPickContext ? (
           <ContextPicker

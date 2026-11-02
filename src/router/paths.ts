@@ -18,9 +18,11 @@ export interface AppPaths {
   metadataLakehouseBuilder(connectionId?: string, versionId?: string): string
   metadataLakehouseConnection(connectionId: string): string
   dataAnalyst(connectionId?: string, sessionId?: string): string
-  playbooks(connectionId?: string): string
-  playbookBuilder(connectionId?: string, sessionId?: string): string
-  readonly nexusPlaybooks: string
+  readonly playbooks: string
+  playbook(playbookId: string): string
+  playbookEditor(playbookId: string): string
+  readonly playbookExecutions: string
+  readonly playbookActions: string
   readonly agentLibrary: string
   libraryAgent(agentId: string, sessionId?: string): string
   libraryAgentEdit(agentId?: string): string
@@ -40,6 +42,7 @@ export interface AppPaths {
   readonly companySettings: string | null
   readonly profile: string
   readonly deletedItems: string
+  readonly credits: string
 }
 
 const PLATFORM: AppPaths = {
@@ -64,13 +67,11 @@ const PLATFORM: AppPaths = {
     connectionId
       ? `/platform/data-analyst/${encodeURIComponent(connectionId)}${sessionId ? `/${encodeURIComponent(sessionId)}` : ''}`
       : '/platform/data-analyst',
-  playbooks: (connectionId) =>
-    connectionId ? `/platform/playbooks/${encodeURIComponent(connectionId)}` : '/platform/playbooks',
-  playbookBuilder: (connectionId, sessionId) =>
-    connectionId
-      ? `/platform/playbook-builder/${encodeURIComponent(connectionId)}${sessionId ? `/${encodeURIComponent(sessionId)}` : ''}`
-      : '/platform/playbook-builder',
-  nexusPlaybooks: '/platform/nexus/playbooks',
+  playbooks: '/platform/playbooks',
+  playbook: (id) => `/platform/playbooks/${encodeURIComponent(id)}`,
+  playbookEditor: (id) => `/platform/playbooks/${encodeURIComponent(id)}/edit`,
+  playbookExecutions: '/platform/playbooks/executions',
+  playbookActions: '/platform/playbooks/actions',
   agentLibrary: '/platform/agents',
   libraryAgent: (id, sessionId) =>
     `/platform/agents/${encodeURIComponent(id)}${sessionId ? `/chat/${encodeURIComponent(sessionId)}` : ''}`,
@@ -91,6 +92,7 @@ const PLATFORM: AppPaths = {
   companySettings: null,
   profile: '/platform/profile',
   deletedItems: '/platform/deleted-items',
+  credits: '/platform/credits',
 }
 
 const WORKSPACE: AppPaths = {
@@ -115,12 +117,11 @@ const WORKSPACE: AppPaths = {
     connectionId
       ? `/data-analyst/${encodeURIComponent(connectionId)}${sessionId ? `/${encodeURIComponent(sessionId)}` : ''}`
       : '/data-analyst',
-  playbooks: (connectionId) => (connectionId ? `/playbooks/${encodeURIComponent(connectionId)}` : '/playbooks'),
-  playbookBuilder: (connectionId, sessionId) =>
-    connectionId
-      ? `/playbook-builder/${encodeURIComponent(connectionId)}${sessionId ? `/${encodeURIComponent(sessionId)}` : ''}`
-      : '/playbook-builder',
-  nexusPlaybooks: '/nexus/playbooks',
+  playbooks: '/playbooks',
+  playbook: (id) => `/playbooks/${encodeURIComponent(id)}`,
+  playbookEditor: (id) => `/playbooks/${encodeURIComponent(id)}/edit`,
+  playbookExecutions: '/playbooks/executions',
+  playbookActions: '/playbooks/actions',
   agentLibrary: '/agents',
   libraryAgent: (id, sessionId) =>
     `/agents/${encodeURIComponent(id)}${sessionId ? `/chat/${encodeURIComponent(sessionId)}` : ''}`,
@@ -141,6 +142,7 @@ const WORKSPACE: AppPaths = {
   companySettings: '/settings/company',
   profile: '/settings/profile',
   deletedItems: '/deleted-items',
+  credits: '/credits',
 }
 
 export function isPlatformRole(role: RoleName | null | undefined): boolean {

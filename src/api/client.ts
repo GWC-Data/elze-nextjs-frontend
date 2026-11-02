@@ -1,4 +1,5 @@
-import { ADK_API_BASE_URL, ADK_API_KEY, CONTEXT_API_BASE_URL, IS_SAME_ORIGIN_API } from '@/constants/env'
+import { ADK_API_BASE_URL, CONTEXT_API_BASE_URL, IS_SAME_ORIGIN_API } from '@/constants/env'
+import { announceCreditUse, isBillableAgentCall } from '@/lib/creditEvents'
 import axios from 'axios'
 import type { AxiosError, AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios'
 
@@ -19,6 +20,8 @@ export type ApiErrorCode =
   | 'INSUFFICIENT_PERMISSION'
   | 'TENANT_ACCESS_DENIED'
   | 'FEATURE_NOT_ENABLED'
+  | 'INSUFFICIENT_CREDITS'
+  | 'CREDIT_LIMIT_REACHED'
   | 'VALIDATION_ERROR'
   | 'RESOURCE_NOT_FOUND'
   | 'CONFLICT'
@@ -269,6 +272,12 @@ function agentRefusal(status: number, reason: string | null | undefined): string
   if (reason === 'FEATURE_NOT_ENABLED') {
     return 'Your company does not have this feature. The platform owner can enable it.'
   }
+  if (reason === 'INSUFFICIENT_CREDITS') {
+    return 'Your company is out of credits for this. Ask the platform team to add more.'
+  }
+  if (reason === 'CREDIT_LIMIT_REACHED') {
+    return 'You have reached your credit limit. A company admin can raise it.'
+  }
   return 'Your role does not include this action. A company administrator can change your role.'
 }
 
@@ -377,10 +386,6 @@ export class AdkApiError extends Error {
   }
 }
 
-function adkHeaders(): Record<string, string> {
-  return ADK_API_KEY ? { 'X-API-Key': ADK_API_KEY } : {}
-}
-
 async function readAdkErrorDetail(res: Response): Promise<string> {
   try {
     const body: unknown = await res.json()
@@ -396,10 +401,8 @@ async function readAdkErrorDetail(res: Response): Promise<string> {
 }
 
 export async function adkRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetchWithSession(`${ADK_API_BASE_URL}${path}`, {
-    ...init,
-    headers: { ...adkHeaders(), ...(init?.headers as Record<string, string> | undefined) },
-  })
+  const res = await fetchWithSession(`${ADK_API_BASE_URL}${path}`, init)
+  if (isBillableAgentCall(path, init?.method)) announceCreditUse()
   if (!res.ok) throw new AdkApiError(agentResponseRefusal(res) ?? (await readAdkErrorDetail(res)), res.status)
   if (res.status === 204) return undefined as T
   return (await res.json()) as T
@@ -408,9 +411,10 @@ export async function adkRequest<T>(path: string, init?: RequestInit): Promise<T
 export async function adkStream(path: string, body: Record<string, unknown>): Promise<Response> {
   const res = await fetchWithSession(`${ADK_API_BASE_URL}${path}`, {
     method: 'POST',
-    headers: { ...adkHeaders(), 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
+  if (isBillableAgentCall(path, 'POST')) announceCreditUse()
   if (!res.ok) throw new AdkApiError(agentResponseRefusal(res) ?? (await readAdkErrorDetail(res)), res.status)
   return res
 }

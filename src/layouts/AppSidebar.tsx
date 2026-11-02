@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { ChevronDown, ChevronsUpDown, Gem, LogOut } from 'lucide-react'
-import { NavLink, useLocation, useNavigate } from '@/lib/router'
+import { ChevronDown, ChevronRight, ChevronsUpDown, Coins, LogOut } from 'lucide-react'
+import { Link, NavLink, useLocation, useNavigate } from '@/lib/router'
 import { useAuth } from '@/context/authContext'
 import { usePaths } from '@/hooks/usePaths'
 import { accountMenuWithin, isNavItemActive, navigationWithin } from '@/constants/navigation'
@@ -32,16 +32,16 @@ import {
 } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import { ElzeMark } from '@/components/common/ElzeMark'
+import { Hint } from '@/components/common/Hint'
+import { LOW_BALANCE } from '@/constants/credits'
+import { useCredits } from '@/hooks/useCredits'
+import { creditLabel, formatCredits } from '@/lib/format'
+import type { CreditStatus } from '@/types/credits'
 
 export interface AppSidebarProps {
   navigation: string[]
   onNavigate?: () => void
 }
-
-const CREDIT_BALANCE: number = 200
-
-const creditCount = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
-const creditLabel = (n: number) => `${creditCount.format(n)} credit${n === 1 ? '' : 's'}`
 
 const COLLAPSED_KEY = 'elze.sidebar.collapsedSections'
 
@@ -84,6 +84,7 @@ export function AppSidebar({ navigation, onNavigate }: AppSidebarProps) {
   const groups = navigationWithin(paths, allowed, user?.role)
   const accountItems = accountMenuWithin(paths, allowed)
   const navigate = useNavigate()
+  const credits = useCredits()
   const platform = paths.shell === 'platform'
   const iconRail = state === 'collapsed' && !isMobile
 
@@ -185,19 +186,16 @@ export function AppSidebar({ navigation, onNavigate }: AppSidebarProps) {
 
       <SidebarFooter className="gap-1 border-t border-sidebar-border p-2">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip={`Balance: ${creditLabel(CREDIT_BALANCE)}`}
-              className="cursor-default hover:bg-transparent active:bg-transparent"
-              aria-label={`Credit balance: ${creditLabel(CREDIT_BALANCE)}`}
-            >
-              <Gem className="size-4 shrink-0 text-primary" aria-hidden />
-              <span className="font-semibold tabular-nums text-sidebar-foreground">
-                {creditCount.format(CREDIT_BALANCE)}
-              </span>
-              <span className="text-muted-foreground">{CREDIT_BALANCE === 1 ? 'credit' : 'credits'}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {credits.status && !credits.status.exempt ? (
+            <SidebarMenuItem className="mb-1 group-data-[collapsible=icon]:mb-0">
+              <CreditBalance
+                status={credits.status}
+                to={allowed.has(paths.credits) ? paths.credits : null}
+                active={isNavItemActive({ label: 'Credits', path: paths.credits, icon: Coins }, pathname)}
+                onNavigate={handleNavClick}
+              />
+            </SidebarMenuItem>
+          ) : null}
 
           {user ? (
             <SidebarMenuItem>
@@ -209,8 +207,8 @@ export function AppSidebar({ navigation, onNavigate }: AppSidebarProps) {
                     aria-label={`Account: ${name}`}
                     className="data-[state=open]:bg-sidebar-accent"
                   >
-                    <Avatar className="size-8 rounded-lg ring-1 ring-sidebar-border">
-                      <AvatarFallback className="rounded-lg bg-sidebar-accent text-xs font-semibold text-sidebar-foreground">
+                    <Avatar className="size-8 after:hidden">
+                      <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
                         {initials(name)}
                       </AvatarFallback>
                     </Avatar>
@@ -261,6 +259,142 @@ export function AppSidebar({ navigation, onNavigate }: AppSidebarProps) {
 
       <SidebarRail />
     </Sidebar>
+  )
+}
+
+type CreditState = 'ok' | 'low' | 'empty'
+
+const CREDIT_TONES: Record<CreditState, { icon: string; value: string; pill: string; bar: string; dot: string }> = {
+  ok: {
+    icon: 'bg-primary/10 text-primary',
+    value: 'text-sidebar-foreground',
+    pill: '',
+    bar: 'bg-primary',
+    dot: '',
+  },
+  low: {
+    icon: 'bg-warning/20 text-warning-foreground dark:text-warning',
+    value: 'text-warning-foreground dark:text-warning',
+    pill: 'bg-warning/15 text-warning-foreground dark:text-warning',
+    bar: 'bg-warning',
+    dot: 'bg-warning',
+  },
+  empty: {
+    icon: 'bg-destructive/10 text-destructive',
+    value: 'text-destructive',
+    pill: 'bg-destructive/10 text-destructive',
+    bar: 'bg-destructive',
+    dot: 'bg-destructive',
+  },
+}
+
+function CreditBalance({
+  status,
+  to,
+  active,
+  onNavigate,
+}: {
+  status: CreditStatus
+  to: string | null
+  active: boolean
+  onNavigate: () => void
+}) {
+  const available = status.available ?? 0
+  const state: CreditState = available <= 0 ? 'empty' : available < LOW_BALANCE ? 'low' : 'ok'
+  const tone = CREDIT_TONES[state]
+  const limit = status.limit
+  const share = limit === null ? 0 : limit === 0 ? 100 : Math.min(100, (status.used / limit) * 100)
+
+  const details = (
+    <div className="space-y-0.5 text-xs">
+      <p className="font-medium">{creditLabel(available)} available</p>
+      <p className="opacity-80">Company balance {formatCredits(status.balance)}</p>
+      <p className="opacity-80">
+        {limit === null
+          ? `You have used ${formatCredits(status.used)}`
+          : `You have used ${formatCredits(status.used)} of your ${formatCredits(limit)} limit`}
+      </p>
+    </div>
+  )
+
+  const body = (
+    <>
+      <span className="flex items-center gap-2.5 group-data-[collapsible=icon]:justify-center">
+        <span className={cn('relative grid size-8 shrink-0 place-items-center rounded-full', tone.icon)}>
+          <Coins className="size-4" aria-hidden />
+          {state !== 'ok' && (
+            <span
+              className={cn(
+                'absolute -top-0.5 -right-0.5 hidden size-2.5 rounded-full ring-2 ring-sidebar group-data-[collapsible=icon]:block',
+                tone.dot
+              )}
+              aria-hidden
+            />
+          )}
+        </span>
+        <span className="min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
+          <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            Credits
+            {state !== 'ok' && (
+              <span className={cn('rounded-full px-1.5 py-px text-[10px] font-semibold', tone.pill)}>
+                {state === 'empty' ? 'Empty' : 'Low'}
+              </span>
+            )}
+          </span>
+          <span className="mt-0.5 flex items-baseline gap-1">
+            <span className={cn('text-[15px] font-semibold tabular-nums', tone.value)}>{formatCredits(available)}</span>
+            <span className="text-xs text-muted-foreground">available</span>
+          </span>
+        </span>
+        {to && (
+          <ChevronRight
+            className="size-4 shrink-0 text-muted-foreground/70 transition-transform group-hover/credits:translate-x-0.5 group-data-[collapsible=icon]:hidden"
+            aria-hidden
+          />
+        )}
+      </span>
+      {limit !== null && (
+        <span className="mt-2.5 block group-data-[collapsible=icon]:hidden">
+          <span className="block h-1.5 overflow-hidden rounded-full bg-sidebar-border">
+            <span className={cn('block h-full rounded-full', tone.bar)} style={{ width: `${share}%` }} />
+          </span>
+          <span className="mt-1.5 flex justify-between gap-2 text-[11px] tabular-nums text-muted-foreground">
+            <span>Your limit</span>
+            <span>
+              {formatCredits(status.used)} of {formatCredits(limit)} used
+            </span>
+          </span>
+        </span>
+      )}
+    </>
+  )
+
+  const className = cn(
+    'group/credits block w-full rounded-xl border border-sidebar-border bg-card p-2.5 text-left shadow-xs transition-colors',
+    'group-data-[collapsible=icon]:border-transparent group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:shadow-none',
+    to && 'hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none',
+    active && 'border-primary/30 bg-sidebar-accent'
+  )
+  const label = `Credits: ${creditLabel(available)} available`
+
+  return (
+    <Hint label={details} side="right">
+      {to ? (
+        <Link
+          to={to}
+          onClick={onNavigate}
+          aria-label={label}
+          aria-current={active ? 'page' : undefined}
+          className={className}
+        >
+          {body}
+        </Link>
+      ) : (
+        <div className={cn(className, 'cursor-default')} role="group" aria-label={label}>
+          {body}
+        </div>
+      )}
+    </Hint>
   )
 }
 

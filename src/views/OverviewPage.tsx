@@ -400,7 +400,7 @@ function UserOverview() {
 
   const actions: QuickAction[] = [
     { label: 'Ask the Data analyst', to: paths.dataAnalyst(), icon: Bot },
-    { label: 'Playbooks', to: paths.playbooks(), icon: BookOpen },
+    { label: 'Playbooks', to: paths.playbooks, icon: BookOpen },
     ...(can('dashboard.read') ? [{ label: 'Dashboards', to: paths.dashboards, icon: LayoutDashboard }] : []),
     { label: 'Your account', to: paths.profile, icon: UserCircle },
   ]
