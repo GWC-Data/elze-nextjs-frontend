@@ -5,7 +5,9 @@ const AGENT_ACTIONS = ['agent.delete', 'agent.manage_all', 'agent.schedule', 'ag
 export const PAGE_ABILITIES = {
   AccessPage: ['access.grant', 'access.revoke'],
   AgentLibraryPage: ['agent.create', ...AGENT_ACTIONS],
+  AppShell: ['audit.read'],
   ArchitecturePage: ['context.create', 'context.read'],
+  AuditLogPage: ['audit.read'],
   CompaniesPage: ['company.create'],
   CompanyDetailPage: [
     'company.delete',

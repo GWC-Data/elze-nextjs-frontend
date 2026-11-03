@@ -20,6 +20,8 @@ export const contextKeys = {
 
   contextProfile: (connectionId: string) => [...contextKeys.all, 'context-profile', connectionId] as const,
 
+  businessLayer: (connectionId: string) => [...contextKeys.all, 'business-layer', connectionId] as const,
+
   profile: (connectionId: string) => [...contextKeys.all, 'profile', connectionId] as const,
   tableProfile: (connectionId: string, tableId: string) =>
     [...contextKeys.profile(connectionId), 'table', tableId] as const,
@@ -34,7 +36,7 @@ export const contextKeys = {
     [...contextKeys.all, 'extraction', connectionId] as const,
 
 
-  model: (connectionId: string) => [...contextKeys.all, 'model', connectionId] as const,
+  relationships: (connectionId: string) => [...contextKeys.all, 'relationships', connectionId] as const,
 
   review: (connectionId: string) => [...contextKeys.all, 'review', connectionId] as const,
   reviewFiltered: (connectionId: string, filters: object) =>

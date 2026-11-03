@@ -27,8 +27,6 @@ import {
 } from 'lucide-react'
 import type { AppPaths } from '@/router/paths'
 
-import type { RoleName } from '@/types/auth'
-
 export interface NavItem {
   label: string
   path: string
@@ -94,7 +92,11 @@ function playbooks(paths: AppPaths): NavItem {
   }
 }
 
-function platformGroups(paths: AppPaths): NavGroup[] {
+function auditLabel(auditLog: boolean): string {
+  return auditLog ? 'Audit log' : 'My activity'
+}
+
+function platformGroups(paths: AppPaths, auditLog: boolean): NavGroup[] {
   return [
     {
       title: null,
@@ -137,14 +139,14 @@ function platformGroups(paths: AppPaths): NavGroup[] {
     {
       title: 'System',
       items: [
-        { label: 'Audit log', path: paths.audit, icon: Activity },
+        { label: auditLabel(auditLog), path: paths.audit, icon: Activity },
         { label: 'Deleted items', path: paths.deletedItems, icon: Trash2, permission: 'delete.permanent' },
       ],
     },
   ]
 }
 
-function workspaceGroups(paths: AppPaths, role?: RoleName): NavGroup[] {
+function workspaceGroups(paths: AppPaths, auditLog: boolean): NavGroup[] {
   return [
     {
       title: null,
@@ -182,15 +184,15 @@ function workspaceGroups(paths: AppPaths, role?: RoleName): NavGroup[] {
     {
       title: 'Activity',
       items: [
-        { label: role === 'COMPANY_ADMIN' ? 'Audit log' : 'My activity', path: paths.audit, icon: History },
+        { label: auditLabel(auditLog), path: paths.audit, icon: History },
         { label: 'Deleted items', path: paths.deletedItems, icon: Trash2, permission: 'delete.permanent' },
       ],
     },
   ]
 }
 
-function groupsFor(paths: AppPaths, role?: RoleName): NavGroup[] {
-  return paths.shell === 'platform' ? platformGroups(paths) : workspaceGroups(paths, role)
+function groupsFor(paths: AppPaths, auditLog = false): NavGroup[] {
+  return paths.shell === 'platform' ? platformGroups(paths, auditLog) : workspaceGroups(paths, auditLog)
 }
 
 function accountItems(paths: AppPaths): NavItem[] {
@@ -212,7 +214,7 @@ function accountItems(paths: AppPaths): NavItem[] {
   return items.filter((item) => item.path)
 }
 
-export function navigationPaths(paths: AppPaths, can: (permission: string) => boolean, role?: RoleName): string[] {
+export function navigationPaths(paths: AppPaths, can: (permission: string) => boolean): string[] {
   const found: string[] = []
   const collect = (items: NavItem[]) => {
     for (const item of items) {
@@ -220,14 +222,14 @@ export function navigationPaths(paths: AppPaths, can: (permission: string) => bo
       if (item.children) collect(item.children)
     }
   }
-  for (const group of visible(groupsFor(paths, role), permitted(can))) collect(group.items)
+  for (const group of visible(groupsFor(paths), permitted(can))) collect(group.items)
   collect(accountItems(paths).filter(permitted(can)))
   return found
 }
 
-export function navigationWithin(paths: AppPaths, allowed: ReadonlySet<string>, role?: RoleName): NavGroup[] {
+export function navigationWithin(paths: AppPaths, allowed: ReadonlySet<string>, auditLog: boolean): NavGroup[] {
   const inList = listed(allowed)
-  return visible(groupsFor(paths, role), (item) => !item.hidden && inList(item))
+  return visible(groupsFor(paths, auditLog), (item) => !item.hidden && inList(item))
 }
 
 export function accountMenuWithin(paths: AppPaths, allowed: ReadonlySet<string>): NavItem[] {

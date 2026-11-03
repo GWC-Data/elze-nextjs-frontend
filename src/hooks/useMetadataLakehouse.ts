@@ -6,16 +6,19 @@ import type { DeleteResult } from '@/api/client'
 import * as connectionsApi from '@/api/connection.api'
 import * as datasetsApi from '@/api/dataset.api'
 import * as profileApi from '@/api/profile.api'
-import * as modelApi from '@/api/model.api'
+import * as relationshipsApi from '@/api/relationships.api'
 import * as reviewApi from '@/api/review.api'
 import * as publishApi from '@/api/publish.api'
 import * as extractionApi from '@/api/extraction.api'
 import * as contextObjectsApi from '@/api/contextObjects.api'
 import * as versionsApi from '@/api/version.api'
 import * as accessApi from '@/api/contextAccess.api'
+import * as businessLayerApi from '@/api/businessLayer.api'
 import { contextKeys } from '@/lib/queryKeys'
 import { useViewVersionId } from '@/context/workflowContext'
 import type {
+  BusinessLayer,
+  BusinessLayerState,
   CompanyPublished,
   CompanyPublishedQuery,
   Connection,
@@ -31,7 +34,8 @@ import type {
   Understanding,
   WorkflowStepId,
   CreatedConnection,
-  ModelGraph,
+  RelationshipDetection,
+  RelationshipProgress,
   ProfileOverview,
   PublishResult,
   PublishSummary,
@@ -181,6 +185,33 @@ export function useSaveContextProfile(connectionId: string | null) {
   })
 }
 
+export function useBusinessLayer(connectionId: string | null) {
+  const version = useViewVersionId()
+  return useQuery<BusinessLayerState>({
+    queryKey: [...contextKeys.businessLayer(connectionId ?? ''), ...scoped(version)],
+    queryFn: () => businessLayerApi.getBusinessLayer(connectionId!, version),
+    enabled: Boolean(connectionId),
+    staleTime: Infinity,
+    ...proposedQueryOptions<BusinessLayerState>(),
+  })
+}
+
+export function useSaveBusinessLayer(connectionId: string | null) {
+  const qc = useQueryClient()
+  return useMutation<BusinessLayerState, unknown, BusinessLayer>({
+    mutationFn: (layer) => businessLayerApi.saveBusinessLayer(connectionId!, layer),
+    onSuccess: (state) => {
+      const key = contextKeys.businessLayer(connectionId ?? '')
+      const before = qc.getQueryData<BusinessLayerState>(key)
+      qc.setQueryData(key, state)
+      if (before?.versionId !== state.versionId) {
+        qc.invalidateQueries({ queryKey: contextKeys.versions(connectionId ?? '') })
+        qc.invalidateQueries({ queryKey: contextKeys.connections(), exact: true })
+      }
+    },
+  })
+}
+
 export function useCreateConnection() {
   const qc = useQueryClient()
   return useMutation<
@@ -256,7 +287,6 @@ export function useSaveSelection(connectionId: string | null) {
         qc.invalidateQueries({ queryKey: contextKeys.datasetsAll(connectionId) })
         qc.invalidateQueries({ queryKey: contextKeys.profile(connectionId) })
         qc.invalidateQueries({ queryKey: contextKeys.extraction(connectionId) })
-        qc.invalidateQueries({ queryKey: contextKeys.model(connectionId) })
         qc.invalidateQueries({ queryKey: contextKeys.review(connectionId) })
         qc.invalidateQueries({ queryKey: contextKeys.publish(connectionId) })
         invalidateVersions(qc, connectionId)
@@ -313,64 +343,34 @@ export function useExtraction(connectionId: string | null, enabled = true) {
   })
 }
 
-export function useRunExtraction(connectionId: string | null) {
-  const qc = useQueryClient()
+function prefetchAnalysis(qc: QueryClient, id: string) {
+  return Promise.all([
+    qc.fetchQuery({
+      queryKey: [...contextKeys.factsByTable(id), DEFAULT_TABLES_QUERY],
+      queryFn: () => contextObjectsApi.fetchFactsByTable(id, DEFAULT_TABLES_QUERY),
+      staleTime: 0,
+    }),
+    qc.fetchQuery({
+      queryKey: [...contextKeys.understanding(id), DEFAULT_GLOSSARY_QUERY],
+      queryFn: () => contextObjectsApi.fetchUnderstanding(id, DEFAULT_GLOSSARY_QUERY),
+      staleTime: 0,
+    }),
+  ]).catch(() => undefined)
+}
+
+function invalidateAnalysis(qc: QueryClient, connectionId: string | null) {
+  qc.invalidateQueries({ queryKey: contextKeys.extraction(connectionId ?? '') })
+  invalidateVersions(qc, connectionId)
+  qc.invalidateQueries({ queryKey: contextKeys.review(connectionId ?? '') })
+  qc.invalidateQueries({ queryKey: contextKeys.publish(connectionId ?? '') })
+  qc.invalidateQueries({ queryKey: contextKeys.contextObjects(connectionId ?? '') })
+  qc.invalidateQueries({ queryKey: contextKeys.factsByTable(connectionId ?? '') })
+  qc.invalidateQueries({ queryKey: contextKeys.understanding(connectionId ?? '') })
+}
+
+function useStopControl(connectionId: string | null) {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [stopping, setStopping] = useState(false)
-
-  const mutation = useMutation<ExtractionResult, unknown, { datasetIds: string[]; files?: File[] }>({
-    mutationFn: async ({ datasetIds, files }) => {
-      const state = await versionsApi.fetchVersions(connectionId!)
-      const draft = state.draft ?? (await versionsApi.createVersion(connectionId!)).draft
-      if (!draft) throw new Error('No draft version to analyse into.')
-      const profile = await connectionsApi.getContextProfile(connectionId!)
-
-      const result = await extractionApi.runExtraction(
-        connectionId!,
-        {
-          versionId: draft.id,
-          contextName: profile?.name || draft.name,
-          contextDescription: profile?.description ?? null,
-          datasetIds,
-          files,
-        },
-        setSessionId
-      )
-      const report = result.text.trim() || 'Extraction finished without a written summary.'
-      await versionsApi
-        .saveExtraction(connectionId!, { sessionId: result.sessionId, report, datasetIds })
-        .catch(() => undefined)
-
-      const id = connectionId!
-      await Promise.all([
-        qc.fetchQuery({
-          queryKey: [...contextKeys.factsByTable(id), DEFAULT_TABLES_QUERY],
-          queryFn: () => contextObjectsApi.fetchFactsByTable(id, DEFAULT_TABLES_QUERY),
-          staleTime: 0,
-        }),
-        qc.fetchQuery({
-          queryKey: [...contextKeys.understanding(id), DEFAULT_GLOSSARY_QUERY],
-          queryFn: () => contextObjectsApi.fetchUnderstanding(id, DEFAULT_GLOSSARY_QUERY),
-          staleTime: 0,
-        }),
-      ]).catch(() => undefined)
-      return result
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: contextKeys.extraction(connectionId ?? '') })
-      invalidateVersions(qc, connectionId)
-      qc.invalidateQueries({ queryKey: contextKeys.model(connectionId ?? '') })
-      qc.invalidateQueries({ queryKey: contextKeys.review(connectionId ?? '') })
-      qc.invalidateQueries({ queryKey: contextKeys.publish(connectionId ?? '') })
-      qc.invalidateQueries({ queryKey: contextKeys.contextObjects(connectionId ?? '') })
-      qc.invalidateQueries({ queryKey: contextKeys.factsByTable(connectionId ?? '') })
-      qc.invalidateQueries({ queryKey: contextKeys.understanding(connectionId ?? '') })
-    },
-    onSettled: () => {
-      setSessionId(null)
-      setStopping(false)
-    },
-  })
 
   const stop = async () => {
     if (!connectionId || !sessionId || stopping) return null
@@ -385,7 +385,88 @@ export function useRunExtraction(connectionId: string | null) {
     }
   }
 
-  return { ...mutation, stop, stopping, canStop: mutation.isPending && Boolean(sessionId) && !stopping }
+  const reset = () => {
+    setSessionId(null)
+    setStopping(false)
+  }
+
+  return { sessionId, setSessionId, stopping, stop, reset }
+}
+
+export function useApplyBusinessContext(connectionId: string | null) {
+  const qc = useQueryClient()
+  const control = useStopControl(connectionId)
+
+  const mutation = useMutation<
+    string,
+    unknown,
+    { sessionId: string; report: string; datasetIds: string[]; request: string }
+  >({
+    mutationFn: async ({ sessionId, report, datasetIds, request }) => {
+      control.setSessionId(sessionId)
+      const reply = await extractionApi.applyBusinessContext(connectionId!, sessionId, request)
+      const combined = extractionApi.withBusinessContextReply(report, reply)
+      await versionsApi.saveExtraction(connectionId!, { sessionId, report: combined, datasetIds }).catch(() => undefined)
+      await prefetchAnalysis(qc, connectionId!)
+      return combined
+    },
+    onSuccess: () => invalidateAnalysis(qc, connectionId),
+    onSettled: control.reset,
+  })
+
+  return {
+    ...mutation,
+    stop: control.stop,
+    stopping: control.stopping,
+    canStop: mutation.isPending && Boolean(control.sessionId) && !control.stopping,
+  }
+}
+
+export function useRunExtraction(connectionId: string | null) {
+  const qc = useQueryClient()
+  const control = useStopControl(connectionId)
+
+  const mutation = useMutation<
+    ExtractionResult,
+    unknown,
+    { datasetIds: string[]; files?: File[]; businessContext?: string }
+  >({
+    mutationFn: async ({ datasetIds, files, businessContext }) => {
+      const state = await versionsApi.fetchVersions(connectionId!)
+      const draft = state.draft ?? (await versionsApi.createVersion(connectionId!)).draft
+      if (!draft) throw new Error('No draft version to analyse into.')
+      const profile = await connectionsApi.getContextProfile(connectionId!)
+
+      const result = await extractionApi.runExtraction(
+        connectionId!,
+        {
+          versionId: draft.id,
+          contextName: profile?.name || draft.name,
+          contextDescription: profile?.description ?? null,
+          datasetIds,
+          files,
+          businessContext,
+        },
+        control.setSessionId
+      )
+      const report = result.text.trim() || 'Extraction finished without a written summary.'
+      await versionsApi
+        .saveExtraction(connectionId!, { sessionId: result.sessionId, report, datasetIds })
+        .catch(() => undefined)
+
+      await prefetchAnalysis(qc, connectionId!)
+      return result
+    },
+    onSuccess: () => invalidateAnalysis(qc, connectionId),
+    onSettled: control.reset,
+  })
+
+  return {
+    ...mutation,
+    stop: control.stop,
+    stopping: control.stopping,
+    canStop: mutation.isPending && Boolean(control.sessionId) && !control.stopping,
+  }
 }
 
 export const DEFAULT_FACTS_QUERY: ContextObjectsQuery = { page: 1, pageSize: 25 }
@@ -440,30 +521,52 @@ export function useUnderstanding(
   })
 }
 
-export function useModel(connectionId: string | null, enabled = true) {
-  const version = useViewVersionId()
-  return useQuery<ModelGraph>({
-    queryKey: [...contextKeys.model(connectionId ?? ''), ...scoped(version)],
-    queryFn: () => modelApi.fetchModel(connectionId!, version),
-    enabled: Boolean(connectionId) && enabled,
-    refetchInterval: (query) =>
-      query.state.data?.status === 'generating' ? 4000 : false,
-    ...proposedQueryOptions<ModelGraph>(),
+const RELATIONSHIP_POLL_MS = 1500
+
+export class RelationshipJobError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'RelationshipJobError'
+  }
+}
+
+function pause(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms)
+    signal.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer)
+        reject(signal.reason)
+      },
+      { once: true }
+    )
   })
 }
 
-export function useDecideRelationship(connectionId: string | null) {
-  const qc = useQueryClient()
-  return useMutation<unknown, unknown, { id: string; status: 'accepted' | 'rejected' }>({
-    mutationFn: ({ id, status }) =>
-      modelApi.decideRelationship(connectionId!, id, status),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: contextKeys.model(connectionId ?? '') })
-      qc.invalidateQueries({ queryKey: contextKeys.review(connectionId ?? '') })
-      qc.invalidateQueries({ queryKey: contextKeys.publish(connectionId ?? '') })
-      invalidateVersions(qc, connectionId)
+export function useRelationshipDetection(connectionId: string | null, datasetIds: string[]) {
+  const [progress, setProgress] = useState<RelationshipProgress | null>(null)
+  const query = useQuery<RelationshipDetection>({
+    queryKey: [...contextKeys.relationships(connectionId ?? ''), [...datasetIds].sort()],
+    queryFn: async ({ signal }) => {
+      setProgress(null)
+      const started = await relationshipsApi.startRelationshipDetection(connectionId!, datasetIds)
+      if (started.kind === 'result') return started.result
+      for (;;) {
+        await pause(RELATIONSHIP_POLL_MS, signal)
+        const job = await relationshipsApi.fetchRelationshipJob(connectionId!, started.jobId)
+        setProgress(job.progress)
+        if (job.status === 'done' && job.result) return job.result
+        if (job.status === 'error' || job.status === 'done') {
+          throw new RelationshipJobError(job.error || 'The relationship scan did not finish.')
+        }
+      }
     },
+    enabled: Boolean(connectionId) && datasetIds.length >= 2,
+    staleTime: Infinity,
+    retry: false,
   })
+  return { ...query, progress }
 }
 
 export function useReviewQueue(
@@ -595,7 +698,6 @@ export function useRefreshFacts(connectionId: string | null) {
       contextKeys.understanding(connectionId),
       contextKeys.contextObjects(connectionId),
       contextKeys.review(connectionId),
-      contextKeys.model(connectionId),
     ]) {
       void qc.invalidateQueries({ queryKey: key })
     }

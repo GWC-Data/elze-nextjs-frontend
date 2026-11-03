@@ -86,6 +86,21 @@ export function formatDateTime(value: string | number | null | undefined): strin
   })
 }
 
+export function formatMessageTime(value: number | null | undefined): string {
+  if (value === null || value === undefined) return ''
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) return ''
+  const now = new Date()
+  const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  if (date.toDateString() === now.toDateString()) return time
+  const day = date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() === now.getFullYear() ? undefined : 'numeric',
+  })
+  return `${day}, ${time}`
+}
+
 export function formatText(value: string | null | undefined): string {
   return value === null || value === undefined || value === '' ? EMPTY : value
 }

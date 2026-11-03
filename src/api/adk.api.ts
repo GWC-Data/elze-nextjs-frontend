@@ -41,11 +41,12 @@ interface RawSessionSummary {
   context_id: string
   agent_name: AdkAgentName
   last_update_time: number | null
+  title?: string | null
 }
 
 interface RawSessionDetail extends RawSessionSummary {
   state?: Record<string, unknown>
-  turns?: { role: string; text: string }[]
+  turns?: { role: string; text: string; timestamp?: number | null }[]
 }
 
 function toSessionSummary(raw: RawSessionSummary): AdkSessionSummary {
@@ -54,6 +55,7 @@ function toSessionSummary(raw: RawSessionSummary): AdkSessionSummary {
     contextId: raw.context_id,
     agentName: raw.agent_name,
     lastUpdateTime: raw.last_update_time ?? null,
+    title: raw.title?.trim() || null,
   }
 }
 
@@ -61,7 +63,7 @@ function toSessionDetail(raw: RawSessionDetail): AdkSessionDetail {
   return {
     ...toSessionSummary(raw),
     state: raw.state ?? {},
-    turns: (raw.turns ?? []).map((turn) => ({ role: turn.role, text: turn.text })),
+    turns: (raw.turns ?? []).map((turn) => ({ role: turn.role, text: turn.text, timestamp: turn.timestamp ?? null })),
   }
 }
 

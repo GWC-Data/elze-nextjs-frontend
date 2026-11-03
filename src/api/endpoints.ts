@@ -134,11 +134,11 @@ export const endpoints = {
     versions: (id: string) => `${connectionPath(id)}/versions`,
     version: (id: string, versionId: string) => `${connectionPath(id)}/versions/${enc(versionId)}`,
     draft: (id: string) => `${connectionPath(id)}/draft`,
+    businessLayer: (id: string) => `${connectionPath(id)}/business-layer`,
     extraction: (id: string) => `${connectionPath(id)}/extraction`,
     understanding: (id: string) => `${connectionPath(id)}/understanding`,
     contextObjects: (id: string) => `${connectionPath(id)}/context-objects`,
     factsByTable: (id: string) => `${connectionPath(id)}/context-objects/by-table`,
-    model: (id: string) => `${connectionPath(id)}/model`,
     reviewQueue: (id: string) => `${connectionPath(id)}/review`,
     reviewItem: (id: string, itemId: string) => `${connectionPath(id)}/review/${enc(itemId)}`,
     reviewItemDecision: (id: string, itemId: string) => `${connectionPath(id)}/review/${enc(itemId)}/decision`,
@@ -177,6 +177,9 @@ export const endpoints = {
       `/contexts/${enc(contextId)}/playbooks/${enc(playbookId)}`,
     contextObjects: (contextId: string) => `/contexts/${enc(contextId)}/context-objects`,
     contextVersions: (contextId: string) => `/contexts/${enc(contextId)}/context-versions`,
+    relationshipsDetect: (contextId: string) => `/contexts/${enc(contextId)}/relationships/detect`,
+    relationshipJob: (contextId: string, jobId: string) =>
+      `/contexts/${enc(contextId)}/relationships/jobs/${enc(jobId)}`,
   },
 
   agentLibrary: {

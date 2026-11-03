@@ -18,6 +18,7 @@ const THINGS: Record<string, string> = {
   user: 'Members',
   group: 'Groups',
   role: 'Roles',
+  audit: 'Audit log',
 }
 
 const COLUMNS = ['View', 'Create', 'Edit', 'Delete'] as const

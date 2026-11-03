@@ -33,6 +33,11 @@ const DiscoverStep = lazy(() =>
 const ProfileStep = lazy(() =>
   import('@/components/common/metadata-lakehouse/steps/ProfileStep').then((m) => ({ default: m.ProfileStep }))
 )
+const BusinessLayerStep = lazy(() =>
+  import('@/components/common/metadata-lakehouse/steps/BusinessLayerStep').then((m) => ({
+    default: m.BusinessLayerStep,
+  }))
+)
 const UnderstandStep = lazy(() =>
   import('@/components/common/metadata-lakehouse/steps/UnderstandStep').then((m) => ({ default: m.UnderstandStep }))
 )
@@ -166,6 +171,7 @@ function BuilderShell() {
               {step === 'context' ? <ContextStep /> : null}
               {step === 'discover' ? <DiscoverStep /> : null}
               {step === 'profile' ? <ProfileStep /> : null}
+              {step === 'business' ? <BusinessLayerStep /> : null}
               {step === 'understand' ? <UnderstandStep /> : null}
               {step === 'model' ? <ModelStep /> : null}
               {step === 'review' ? <ReviewStep /> : null}

@@ -19,5 +19,5 @@ export function deniedDetail(session: SignedInSession, permission: string): stri
 
 export function allowedNavigation(session: SignedInSession): string[] {
   const role = session.user.role
-  return navigationPaths(pathsForRole(role), (permission) => can(session, permission), role)
+  return navigationPaths(pathsForRole(role), (permission) => can(session, permission))
 }

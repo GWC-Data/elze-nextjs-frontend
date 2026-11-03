@@ -5,11 +5,13 @@ export interface AdkSessionSummary {
   contextId: string
   agentName: AdkAgentName
   lastUpdateTime: number | null
+  title: string | null
 }
 
 export interface AdkChatTurn {
   role: string
   text: string
+  timestamp: number | null
 }
 
 export interface AdkSessionDetail extends AdkSessionSummary {

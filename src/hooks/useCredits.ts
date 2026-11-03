@@ -102,9 +102,10 @@ export function creditShortfall(status: CreditStatus | null, cost: number | null
   return 'Your company is out of credits. Ask the platform team to add more.'
 }
 
-export function useCreditCheck(action: CreditAction): CreditCheck {
+export function useCreditCheck(action: CreditAction, runs = 1): CreditCheck {
   const { status, rates } = useCredits()
-  const cost = rates?.find((rate) => rate.action === action)?.credits ?? null
+  const rate = rates?.find((entry) => entry.action === action)?.credits ?? null
+  const cost = rate === null ? null : Math.round(rate * runs * 100) / 100
   const reason = creditShortfall(status, cost)
   return { cost, short: reason !== null, reason }
 }

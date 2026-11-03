@@ -6,7 +6,6 @@ import { Database } from "lucide-react"
 
 import { usePaths } from "@/hooks/usePaths"
 import { defaultConnectionId, newestFirst, rememberConnection, useAcrossConnections } from "@/hooks/useAcrossConnections"
-import { ContextQueryProvider } from "@/context/QueryProvider"
 import { AdkChatWorkbench } from "@/components/common/agent/AdkChatWorkbench"
 import { CreditCost } from "@/components/common/credits/CreditCost"
 import { ContextPicker, type PublishedContextOption } from "@/components/common/agent/ContextPicker"
@@ -26,14 +25,6 @@ import {
 const AGENT = "data_analyst" as const
 
 export default function DataAnalystPage() {
-  return (
-    <ContextQueryProvider>
-      <DataAnalyst />
-    </ContextQueryProvider>
-  )
-}
-
-function DataAnalyst() {
   const { connectionId, sessionId } = useParams<{ connectionId?: string; sessionId?: string }>()
   const paths = usePaths()
   const all = useAcrossConnections((id) => listAdkSessions(id, AGENT), AGENT)

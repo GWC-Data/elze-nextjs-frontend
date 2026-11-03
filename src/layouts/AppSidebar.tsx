@@ -73,7 +73,7 @@ function initials(name: string): string {
 }
 
 export function AppSidebar({ navigation, onNavigate }: AppSidebarProps) {
-  const { user, signOut } = useAuth()
+  const { user, signOut, can } = useAuth()
   const paths = usePaths()
   const { pathname } = useLocation()
   const { setOpenMobile, isMobile, state } = useSidebar()
@@ -81,7 +81,7 @@ export function AppSidebar({ navigation, onNavigate }: AppSidebarProps) {
   const [signingOut, setSigningOut] = useState(false)
 
   const allowed = useMemo(() => new Set(navigation), [navigation])
-  const groups = navigationWithin(paths, allowed, user?.role)
+  const groups = navigationWithin(paths, allowed, can('audit.read'))
   const accountItems = accountMenuWithin(paths, allowed)
   const navigate = useNavigate()
   const credits = useCredits()

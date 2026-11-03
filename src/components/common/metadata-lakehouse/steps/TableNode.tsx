@@ -1,16 +1,17 @@
 import { memo } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import type { NodeProps } from '@xyflow/react'
-import { KeyRound, Link2 } from 'lucide-react'
+import { KeyRound, Link2, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { ModelNode } from '@/types/metadataLakehouse'
+import { formatCount } from '@/lib/format'
+import type { DetectedTable } from '@/types/metadataLakehouse'
 import { columnHandle } from '@/lib/graphLayout'
 import { Hint } from '@/components/common/Hint'
 
 const MAX_VISIBLE_COLUMNS = 8
 
 export type TableNodeData = {
-  node: ModelNode
+  table: DetectedTable
   highlighted: boolean
   linked: string[]
   activeColumns: string[]
@@ -19,12 +20,13 @@ export type TableNodeData = {
 const handleClass = '!size-2 !border-2 !border-primary/60 !bg-background'
 
 function TableNodeImpl({ data, selected }: NodeProps) {
-  const { node, highlighted, linked, activeColumns } = data as TableNodeData
+  const { table, highlighted, linked, activeColumns } = data as TableNodeData
   const linkedSet = new Set(linked)
   const activeSet = new Set(activeColumns)
   const ordered = [
-    ...node.columns.filter((c) => linkedSet.has(c.name)),
-    ...node.columns.filter((c) => !linkedSet.has(c.name)),
+    ...table.columns.filter((c) => linkedSet.has(c.name)),
+    ...table.columns.filter((c) => !linkedSet.has(c.name) && c.keyCandidate),
+    ...table.columns.filter((c) => !linkedSet.has(c.name) && !c.keyCandidate),
   ]
   const cap = Math.max(MAX_VISIBLE_COLUMNS, linked.length)
   const visible = ordered.slice(0, cap)
@@ -42,27 +44,15 @@ function TableNodeImpl({ data, selected }: NodeProps) {
       <Handle type="target" position={Position.Left} id="table:target" className={handleClass} />
       <Handle type="source" position={Position.Right} id="table:source" className={handleClass} />
 
-      <header
-        className={cn(
-          'flex items-center gap-1.5 rounded-t-lg border-b px-2.5 py-1.5',
-          node.kind === 'fact' && 'bg-violet-50 dark:bg-violet-950/40',
-          node.kind === 'dimension' && 'bg-sky-50 dark:bg-sky-950/40',
-          node.kind !== 'fact' && node.kind !== 'dimension' && 'bg-muted/60'
-        )}
-      >
-        <span
-          className={cn(
-            'size-1.5 shrink-0 rounded-full',
-            node.kind === 'fact' && 'bg-violet-500',
-            node.kind === 'dimension' && 'bg-sky-500',
-            node.kind !== 'fact' && node.kind !== 'dimension' && 'bg-muted-foreground'
-          )}
-          aria-hidden
-        />
-        <Hint label={node.label}><p className="min-w-0 flex-1 truncate text-xs font-semibold">
-          {node.label}
-        </p></Hint>
-        <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">{node.columns.length}</span>
+      <header className="flex items-center gap-1.5 rounded-t-lg border-b bg-muted/60 px-2.5 py-1.5">
+        <Hint label={table.name}>
+          <p className="min-w-0 flex-1 truncate text-xs font-semibold">{table.name}</p>
+        </Hint>
+        {table.rowCount !== null ? (
+          <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+            {formatCount(table.rowCount)} rows
+          </span>
+        ) : null}
       </header>
 
       <ul className="divide-y text-[11px]">
@@ -93,24 +83,26 @@ function TableNodeImpl({ data, selected }: NodeProps) {
                   />
                 </>
               ) : null}
-              {column.isPrimaryKey ? (
-                <KeyRound className="size-3 shrink-0 text-amber-600" aria-label="Primary key" />
+              {column.keyCandidate ? (
+                <Hint label="Possible key">
+                  <KeyRound className="size-3 shrink-0 text-amber-600" aria-label="Possible key" />
+                </Hint>
               ) : isLinked ? (
                 <Link2 className="size-3 shrink-0 text-primary" aria-label="Joined column" />
               ) : (
                 <span className="size-3 shrink-0" aria-hidden />
               )}
-              <Hint label={column.name}><span className="min-w-0 flex-1 truncate font-mono">
-                {column.name}
-              </span></Hint>
+              <Hint label={column.name}>
+                <span className="min-w-0 flex-1 truncate font-mono">{column.name}</span>
+              </Hint>
+              {column.sensitive ? (
+                <Hint label="The name looks sensitive. Values are never shown.">
+                  <ShieldAlert className="size-3 shrink-0 text-amber-600" aria-label="Sensitive column name" />
+                </Hint>
+              ) : null}
               {column.dataType ? (
                 <span className="shrink-0 truncate text-[9px] uppercase text-muted-foreground">
                   {column.dataType}
-                </span>
-              ) : null}
-              {column.isForeignKey ? (
-                <span className="shrink-0 text-[9px] font-semibold text-sky-800 dark:text-sky-300">
-                  FK
                 </span>
               ) : null}
             </li>
@@ -119,7 +111,7 @@ function TableNodeImpl({ data, selected }: NodeProps) {
         {overflow > 0 ? (
           <li className="px-2.5 py-1 text-[11px] italic text-muted-foreground">+{overflow} more</li>
         ) : null}
-        {node.columns.length === 0 ? (
+        {table.columns.length === 0 ? (
           <li className="px-2.5 py-1 text-[11px] italic text-muted-foreground">No columns reported</li>
         ) : null}
       </ul>

@@ -311,59 +311,62 @@ export interface QualityIssue {
   affectedRows: number | null
 }
 
-export interface ModelNodeColumn {
+export interface DetectedColumn {
   name: string
   dataType: string | null
-  isPrimaryKey: boolean
-  isForeignKey: boolean
+  keyCandidate: boolean
+  sensitive: boolean
 }
 
-export interface ModelNode {
+export interface DetectedTable {
   id: string
-  label: string
-  datasetId: string | null
-  kind: 'fact' | 'dimension' | 'table' | string
-  columns: ModelNodeColumn[]
-  position: { x: number; y: number } | null
+  name: string
+  rowCount: number | null
+  columns: DetectedColumn[]
 }
 
-export type RelationshipType =
-  | 'one-to-one'
-  | 'one-to-many'
-  | 'many-to-one'
-  | 'many-to-many'
-  | string
+export type RelationshipCardinality = 'many_to_one' | 'one_to_one' | 'many_to_many' | string
 
-export interface ModelEdge {
+export interface RelationshipEnd {
+  datasetId: string
+  table: string
+  columns: string[]
+}
+
+export interface DetectedRelationship {
   id: string
-  source: string
-  target: string
-  sourceColumn: string
-  targetColumn: string
-  relationshipType: RelationshipType
-  confidence: number | null
-  status: 'suggested' | 'accepted' | 'rejected' | 'inferred' | string
-  rule?: 'declared' | 'primary_key' | 'same_name' | string
-  joinCondition: string | null
-  suggestion: string | null
+  from: RelationshipEnd
+  to: RelationshipEnd
+  cardinality: RelationshipCardinality
+  composite: boolean
+  confidence: number
+  active: boolean
+  involvesSensitiveColumn: boolean
+  partialScan: boolean
+  manySideSampled: boolean
+  basis: string
 }
 
-export interface ModelGraph {
-  connectionId: string
-  status: 'pending' | 'generating' | 'ready' | 'failed'
-  generatedAt: string | null
-  error: string | null
-  nodes: ModelNode[]
-  edges: ModelEdge[]
+export interface SkippedDataset {
+  datasetId: string
+  reason: string
 }
 
-export interface RelationshipInput {
-  source: string
-  target: string
-  sourceColumn: string
-  targetColumn: string
-  relationshipType: RelationshipType
-  status?: ModelEdge['status']
+export interface RelationshipDetection {
+  tables: DetectedTable[]
+  relationships: DetectedRelationship[]
+  unrelatedTables: string[]
+  warnings: string[]
+  datasetsSkipped: SkippedDataset[]
+  scannedAt: string | null
+}
+
+export type RelationshipJobStatus = 'queued' | 'sampling' | 'detecting' | 'done' | 'error'
+
+export interface RelationshipProgress {
+  status: RelationshipJobStatus
+  sampled: number
+  total: number
 }
 
 export type ReviewItemType =
@@ -576,6 +579,7 @@ export type WorkflowStepId =
   | 'context'
   | 'discover'
   | 'profile'
+  | 'business'
   | 'understand'
   | 'model'
   | 'review'
@@ -589,4 +593,16 @@ export interface ContextProfile {
   createdBy: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface BusinessLayer {
+  tables: Record<string, string>
+}
+
+export interface BusinessLayerState {
+  organizationName: string | null
+  versionId: string | null
+  status: ContextVersionStatus | null
+  businessLayer: BusinessLayer
+  updatedAt: string | null
 }

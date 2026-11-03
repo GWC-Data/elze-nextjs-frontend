@@ -137,6 +137,7 @@ const AREA_LABELS: Record<string, string> = {
   data: 'Data',
   context: 'Connections',
   scope: 'Data scopes',
+  audit: 'Audit log',
 }
 
 function RolePermissions({

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useAsync } from '@/hooks/useAsync'
+import { useQuery } from '@tanstack/react-query'
 import { useConnections } from '@/hooks/useMetadataLakehouse'
 import type { Connection } from '@/types/metadataLakehouse'
 import type { AdkSessionSummary } from '@/types/adk'
@@ -31,31 +31,39 @@ export function useAcrossConnections<T>(
   )
   const ids = list ? list.map((c) => c.id).join(',') : null
 
-  const results = useAsync(async () => {
-    if (!list) return null
-    const settled = await Promise.allSettled(list.map((c) => load(c.id)))
-    return settled.map((outcome, index) => ({
-      connection: list[index],
-      items: outcome.status === 'fulfilled' ? outcome.value : null,
-    }))
-  }, [key, ids])
+  const {
+    data: groups,
+    isPending,
+    refetch,
+  } = useQuery({
+    queryKey: ['acrossConnections', key, ids],
+    queryFn: async () => {
+      const targets = list ?? []
+      const settled = await Promise.allSettled(targets.map((c) => load(c.id)))
+      return settled.map((outcome, index) => ({
+        connection: targets[index],
+        items: outcome.status === 'fulfilled' ? outcome.value : null,
+      }))
+    },
+    enabled: list !== null,
+  })
 
-  return useMemo(() => {
-    const groups = results.data
-    return {
+  return useMemo(
+    () => ({
       connections: list,
       items: groups
         ? groups.flatMap((group) => (group.items ?? []).map((item) => ({ connection: group.connection, item })))
         : null,
       failed: groups ? groups.filter((group) => group.items === null).map((group) => group.connection) : [],
-      loading: connections.isPending || results.loading,
+      loading: connections.isPending || isPending,
       error: connections.error,
       reload: () => {
         void connections.refetch()
-        results.reload()
+        void refetch()
       },
-    }
-  }, [list, results, connections])
+    }),
+    [list, groups, isPending, refetch, connections]
+  )
 }
 
 export function hasPublishedContext(connection: Connection): boolean {

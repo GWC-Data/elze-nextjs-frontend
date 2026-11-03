@@ -37,8 +37,8 @@ const HEADINGS: Record<AuditScope, { title: string; description: string; empty: 
   },
   self: {
     title: 'My activity',
-    description: 'What you have done, and what administrators have done to your account.',
-    empty: 'Your sign-ins and the changes made to your account will appear here.',
+    description: 'What you have done: your sign-ins and the changes you made.',
+    empty: 'Your sign-ins and the changes you make will appear here.',
   },
 }
 
@@ -78,9 +78,9 @@ const ACTION_OPTIONS: { value: AuditAction; label: string }[] = [
 
 const ALL = 'all'
 
-function expectedScope(shell: 'platform' | 'workspace', role: string | undefined): AuditScope {
-  if (shell === 'platform') return 'all'
-  return role === 'COMPANY_ADMIN' ? 'company' : 'self'
+function expectedScope(shell: 'platform' | 'workspace', auditLog: boolean): AuditScope {
+  if (!auditLog) return 'self'
+  return shell === 'platform' ? 'all' : 'company'
 }
 
 export default function AuditLogPage() {
@@ -164,9 +164,9 @@ export default function AuditLogPage() {
     </>
   )
   const [inspecting, setInspecting] = useState<AuditLogEntry | null>(null)
-  const { user } = useAuth()
+  const { can } = useAuth()
   const paths = usePaths()
-  const scope: AuditScope = logs.data?.scope ?? expectedScope(paths.shell, user?.role)
+  const scope: AuditScope = logs.data?.scope ?? expectedScope(paths.shell, can('audit.read'))
   const heading = HEADINGS[scope]
 
   const companyColumn: ColumnDef<AuditLogEntry>[] = scope === 'all'

@@ -4,15 +4,16 @@ import { toast } from "sonner"
 import {
   ArrowUp,
   BarChart3,
+  Bot,
   Loader2,
   MessageSquarePlus,
   Paperclip,
-  Sparkles,
   Square,
   Trash2,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { formatMessageTime } from "@/lib/format"
 import { notify } from "@/lib/notify"
 import { useAsync } from "@/hooks/useAsync"
 import { Button } from "@/components/ui/workbench/button"
@@ -20,7 +21,8 @@ import { Skeleton } from "@/components/ui/workbench/skeleton"
 import { MarkdownText } from "@/components/common/agent/tools/MarkdownText"
 import { useAuth } from "@/context/authContext"
 import { dayGreeting, visibleMessage } from "@/lib/agentMessage"
-import { ErrorState, InlineLoading } from "@/components/common/States"
+import { ErrorState } from "@/components/common/States"
+import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import type {
   AdkArtifact,
   AdkChatResponse,
@@ -34,8 +36,8 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 const MAX_INPUT_HEIGHT = 200
 
 type Turn =
-  | { id: string; role: "user"; text: string; files?: string[] }
-  | { id: string; role: "agent"; text: string; toolCalls: string[]; interrupted: boolean }
+  | { id: string; role: "user"; text: string; files?: string[]; at: number | null }
+  | { id: string; role: "agent"; text: string; interrupted: boolean; at: number | null }
   | { id: string; role: "error"; text: string }
 
 function formatSize(bytes: number): string {
@@ -110,6 +112,10 @@ export function AdkChatWorkbench({
   const [usageOpen, setUsageOpen] = React.useState(false)
   const [usageLoading, setUsageLoading] = React.useState(false)
   const [deletingSessionId, setDeletingSessionId] = React.useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = React.useState<AdkSessionSummary | null>(null)
+  const [confirmOpen, setConfirmOpen] = React.useState(false)
+  const [openingSessionId, setOpeningSessionId] = React.useState<string | null>(null)
+  const switching = openingSessionId !== null && openingSessionId !== sessionId
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const messageRef = React.useRef<HTMLTextAreaElement>(null)
   const endRef = React.useRef<HTMLDivElement>(null)
@@ -118,11 +124,12 @@ export function AdkChatWorkbench({
   const history = useAsync(() => (sessionId ? loadSession(sessionId) : Promise.resolve(null)), [sessionId])
   const historyTurns = React.useMemo<Turn[]>(() => {
     if (!history.data) return []
-    return history.data.turns.map((turn) =>
-      turn.role === "user"
-        ? { id: crypto.randomUUID(), role: "user", ...visibleMessage(turn.text) }
-        : { id: crypto.randomUUID(), role: "agent", text: turn.text, toolCalls: [], interrupted: false }
-    ) as Turn[]
+    return history.data.turns.map((turn) => {
+      const at = turn.timestamp ? turn.timestamp * 1000 : null
+      return turn.role === "user"
+        ? { id: crypto.randomUUID(), role: "user", ...visibleMessage(turn.text), at }
+        : { id: crypto.randomUUID(), role: "agent", text: turn.text, interrupted: false, at }
+    }) as Turn[]
   }, [history.data])
   const [local, setLocal] = React.useState<{ key: string; items: Turn[] } | null>(null)
   const hasLocal = local !== null && local.key === viewKey
@@ -157,6 +164,7 @@ export function AdkChatWorkbench({
           id: crypto.randomUUID(),
           role: "user",
           text: text || `Attached ${attachments.length} file${attachments.length === 1 ? "" : "s"}.`,
+          at: Date.now(),
         },
       ],
     })
@@ -190,8 +198,8 @@ export function AdkChatWorkbench({
                   id: crypto.randomUUID(),
                   role: "agent",
                   text: response.text || (response.interrupted ? "Stopped." : ""),
-                  toolCalls: response.toolCalls,
                   interrupted: response.interrupted,
+                  at: Date.now(),
                 },
               ],
             }
@@ -293,10 +301,17 @@ export function AdkChatWorkbench({
       toast.error("Couldn't delete that chat.")
     } finally {
       setDeletingSessionId(null)
+      setConfirmOpen(false)
     }
   }
 
-  const showEmptyState = !historyLoading && !historyError && turns.length === 0 && !isSending
+  const showEmptyState = !switching && !historyLoading && !historyError && turns.length === 0 && !isSending
+
+  const openSession = (entry: AdkSessionSummary) => {
+    if (entry.sessionId === sessionId) return
+    setOpeningSessionId(entry.sessionId)
+    navigate(basePath(entry.sessionId, entry.contextId))
+  }
 
   const attachButton = uploadFile ? (
     <Button
@@ -419,40 +434,33 @@ export function AdkChatWorkbench({
           ) : (
             <ul className="flex flex-col gap-0.5">
               {sessions.map((entry) => {
-                const active = entry.sessionId === sessionId
-                const label = entry.lastUpdateTime
-                  ? new Date(entry.lastUpdateTime * 1000).toLocaleString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })
-                  : "New chat"
+                const active = entry.sessionId === (switching ? openingSessionId : sessionId)
+                const heading = entry.title ?? sessionLabel?.(entry) ?? "New chat"
                 return (
                   <li key={entry.sessionId} className="group flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => navigate(basePath(entry.sessionId, entry.contextId))}
+                      onClick={() => openSession(entry)}
+                      title={heading}
+                      aria-current={active ? "true" : undefined}
                       className={cn(
-                        "flex-1 truncate rounded-md px-2 py-1.5 text-left text-xs transition-colors",
+                        "min-w-0 flex-1 rounded-md px-2 py-1.5 text-left text-xs transition-colors",
                         active
                           ? "bg-accent text-accent-foreground"
                           : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                       )}
                     >
-                      {sessionLabel?.(entry) ? (
-                        <span className="block truncate text-[11px] font-medium text-foreground/80">
-                          {sessionLabel(entry)}
-                        </span>
-                      ) : null}
-                      <span className="block truncate">{label}</span>
+                      <span className="block truncate font-medium text-foreground/90">{heading}</span>
                     </button>
                     {onDeleteSession && (
                       <button
                         type="button"
                         aria-label="Delete chat"
                         disabled={deletingSessionId === entry.sessionId}
-                        onClick={() => void handleDelete(entry)}
+                        onClick={() => {
+                          setDeleteTarget(entry)
+                          setConfirmOpen(true)
+                        }}
                         className="cursor-pointer rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100 disabled:opacity-100"
                       >
                         {deletingSessionId === entry.sessionId ? (
@@ -498,8 +506,11 @@ export function AdkChatWorkbench({
         )}
 
         <div className="min-h-0 flex-1 overflow-auto p-4">
-          {historyLoading ? (
-            <InlineLoading label="Loading conversation…" />
+          {switching || historyLoading ? (
+            <div className="flex h-full min-h-40 items-center justify-center" role="status" aria-live="polite">
+              <Loader2 className="size-8 animate-spin text-primary" aria-hidden />
+              <span className="sr-only">Loading conversation…</span>
+            </div>
           ) : historyError ? (
             <ErrorState error={historyError} title="Couldn't load this conversation" />
           ) : showEmptyState ? (
@@ -565,6 +576,19 @@ export function AdkChatWorkbench({
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Delete this chat?"
+        body={`"${deleteTarget ? (deleteTarget.title ?? sessionLabel?.(deleteTarget) ?? "New chat") : "This chat"}" and all its messages will be deleted. This can't be undone.`}
+        confirmLabel="Delete"
+        destructive
+        pending={deletingSessionId !== null}
+        onConfirm={() => {
+          if (deleteTarget) void handleDelete(deleteTarget)
+        }}
+      />
     </div>
   )
 }
@@ -572,10 +596,10 @@ export function AdkChatWorkbench({
 function AgentAvatar() {
   return (
     <span
-      className="grid size-7 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground"
+      className="grid size-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/20"
       aria-hidden
     >
-      <Sparkles className="size-3.5" />
+      <Bot className="size-4" />
     </span>
   )
 }
@@ -588,6 +612,16 @@ function UserAvatar({ name }: { name: string }) {
     >
       {name.charAt(0).toUpperCase()}
     </span>
+  )
+}
+
+function MessageTime({ at }: { at: number | null }) {
+  const label = formatMessageTime(at)
+  if (!label || at === null) return null
+  return (
+    <time dateTime={new Date(at).toISOString()} className="px-1 text-[11px] text-muted-foreground">
+      {label}
+    </time>
   )
 }
 
@@ -614,6 +648,7 @@ function TurnBubble({ turn, userName, agentName }: { turn: Turn; userName: strin
             ) : null}
             {turn.text ? <p className="whitespace-pre-wrap">{turn.text}</p> : null}
           </div>
+          <MessageTime at={turn.at} />
         </div>
         <UserAvatar name={userName} />
       </div>
@@ -636,9 +671,7 @@ function TurnBubble({ turn, userName, agentName }: { turn: Turn; userName: strin
         <div className="rounded-2xl rounded-tl-sm bg-muted px-3.5 py-2 text-sm text-foreground">
           <MarkdownText text={turn.text} />
         </div>
-        {turn.toolCalls.length > 0 && (
-          <span className="px-1 text-[11px] text-muted-foreground">Used: {turn.toolCalls.join(", ")}</span>
-        )}
+        <MessageTime at={turn.at} />
         {turn.interrupted && <span className="px-1 text-[11px] text-muted-foreground">Stopped early.</span>}
       </div>
     </div>

@@ -7,14 +7,16 @@ import type { CreditAction } from '@/types/credits'
 
 export function CreditCost({
   action,
+  runs = 1,
   onPrimary = false,
   className,
 }: {
   action: CreditAction
+  runs?: number
   onPrimary?: boolean
   className?: string
 }) {
-  const { cost, short, reason } = useCreditCheck(action)
+  const { cost, short, reason } = useCreditCheck(action, runs)
   if (cost === null) return null
 
   const chip = (

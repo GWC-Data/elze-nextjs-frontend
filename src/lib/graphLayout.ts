@@ -1,5 +1,3 @@
-import type { ModelEdge, ModelNode } from '@/types/metadataLakehouse'
-
 const COLUMN_WIDTH = 320
 const ROW_HEIGHT = 190
 const ORIGIN = { x: 40, y: 40 }
@@ -9,7 +7,17 @@ export interface PositionedNode {
   position: { x: number; y: number }
 }
 
-function assignDepths(nodes: ModelNode[], edges: ModelEdge[]): Map<string, number> {
+interface LayoutNode {
+  id: string
+  position?: { x: number; y: number } | null
+}
+
+interface LayoutEdge {
+  source: string
+  target: string
+}
+
+function assignDepths(nodes: LayoutNode[], edges: LayoutEdge[]): Map<string, number> {
   const ids = new Set(nodes.map((n) => n.id))
   const outgoing = new Map<string, string[]>()
   const indegree = new Map<string, number>(nodes.map((n) => [n.id, 0]))
@@ -52,10 +60,10 @@ function assignDepths(nodes: ModelNode[], edges: ModelEdge[]): Map<string, numbe
   return depth
 }
 
-export function autoLayout(nodes: ModelNode[], edges: ModelEdge[]): PositionedNode[] {
+export function autoLayout(nodes: LayoutNode[], edges: LayoutEdge[]): PositionedNode[] {
   const depths = assignDepths(nodes, edges)
 
-  const byDepth = new Map<number, ModelNode[]>()
+  const byDepth = new Map<number, LayoutNode[]>()
   for (const node of nodes) {
     const d = depths.get(node.id) ?? 0
     if (!byDepth.has(d)) byDepth.set(d, [])

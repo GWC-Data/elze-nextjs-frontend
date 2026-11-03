@@ -10,6 +10,7 @@ export const WORKFLOW_STEPS: ReadonlyArray<{
   { id: 'context', label: 'Context', description: 'Name this context' },
   { id: 'discover', label: 'Discover', description: 'Select datasets' },
   { id: 'profile', label: 'Profile', description: 'Tables & schema' },
+  { id: 'business', label: 'Business Layer', description: 'Meaning, dates & KPIs' },
   { id: 'understand', label: 'Understand', description: 'AI generated insights' },
   { id: 'model', label: 'Model', description: 'Relationships' },
   { id: 'review', label: 'Review', description: 'Approve and edit' },
