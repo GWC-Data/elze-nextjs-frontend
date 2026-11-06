@@ -18,11 +18,19 @@ export function CompanyRoleSelect({
   value,
   onChange,
   disabled,
+  label = 'Company role',
+  builtInLabel = 'Member',
+  hideHint = false,
+  inline = false,
 }: {
   companyId: string | null
   value: string | null
   onChange: (roleId: string | null) => void
   disabled?: boolean
+  label?: string
+  builtInLabel?: string
+  hideHint?: boolean
+  inline?: boolean
 }) {
   const id = useId()
   const { can, user } = useAuth()
@@ -39,20 +47,20 @@ export function CompanyRoleSelect({
   if (!readable) return null
 
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-xs font-medium text-foreground">
-        Company role
+    <div className={inline ? 'flex items-center gap-4' : 'space-y-1.5'}>
+      <Label htmlFor={id} className={inline ? 'w-28 shrink-0 text-sm font-normal text-muted-foreground' : 'text-xs font-medium text-foreground'}>
+        {label}
       </Label>
       <Select
         value={value === null ? BUILT_IN : value}
         onValueChange={(next) => onChange(next === BUILT_IN ? null : next)}
         disabled={disabled || roles.loading}
       >
-        <SelectTrigger id={id} className="w-full">
+        <SelectTrigger id={id} className={inline ? 'w-40' : 'w-full'}>
           <SelectValue placeholder={roles.loading ? 'Loading roles…' : undefined} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={BUILT_IN}>Member</SelectItem>
+          <SelectItem value={BUILT_IN}>{builtInLabel}</SelectItem>
           {custom.map((role) => (
             <SelectItem key={role.id} value={role.id}>
               {role.name}
@@ -60,13 +68,15 @@ export function CompanyRoleSelect({
           ))}
         </SelectContent>
       </Select>
-      <p className="text-xs text-muted-foreground">
-        {chosen
-          ? chosen.description || `${chosen.permissionIds.length} permissions, set on the Roles page.`
-          : custom.length
-            ? 'The built-in Member permissions. Pick one of your company’s roles to replace them.'
-            : 'Your company has no roles of its own yet. Create them on the Roles page.'}
-      </p>
+      {hideHint || inline ? null : (
+        <p className="text-xs text-muted-foreground">
+          {chosen
+            ? chosen.description || `${chosen.permissionIds.length} permissions, set on the Roles page.`
+            : custom.length
+              ? 'The built-in Member permissions. Pick one of your company’s roles to replace them.'
+              : 'Your company has no roles of its own yet. Create them on the Roles page.'}
+        </p>
+      )}
     </div>
   )
 }

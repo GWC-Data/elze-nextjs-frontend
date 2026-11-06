@@ -24,6 +24,7 @@ export function ConfirmDialog({
   body,
   extra,
   consequence,
+  bodyHidden = false,
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   destructive = false,
@@ -36,6 +37,7 @@ export function ConfirmDialog({
   body: ReactNode
   extra?: ReactNode
   consequence?: ReactNode
+  bodyHidden?: boolean
   confirmLabel?: string
   cancelLabel?: string
   destructive?: boolean
@@ -47,7 +49,7 @@ export function ConfirmDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{body}</AlertDialogDescription>
+          <AlertDialogDescription className={cn(bodyHidden && 'sr-only')}>{body}</AlertDialogDescription>
         </AlertDialogHeader>
 
         {extra}
@@ -86,7 +88,6 @@ export function DeleteConfirmDialog({
   onOpenChange,
   title,
   body,
-  consequence,
   confirmLabel = 'Delete',
   pending = false,
   onConfirm,
@@ -95,7 +96,6 @@ export function DeleteConfirmDialog({
   onOpenChange: (open: boolean) => void
   title: string
   body: ReactNode
-  consequence?: ReactNode
   confirmLabel?: string
   pending?: boolean
   onConfirm: (permanent: boolean) => void
@@ -121,28 +121,20 @@ export function DeleteConfirmDialog({
       body={body}
       extra={
         allowPermanent ? (
-          <div className="flex items-start gap-2.5 rounded-md border px-3 py-2.5">
+          <div className="flex items-center gap-2.5 rounded-md border px-3 py-2.5">
             <Checkbox
               id={id}
               checked={permanent}
               onCheckedChange={(checked) => setPermanent(checked === true)}
               disabled={pending}
-              className="mt-0.5"
             />
-            <Label htmlFor={id} className="flex-col items-start gap-0.5 text-sm font-medium">
+            <Label htmlFor={id} className="text-sm font-medium">
               Delete permanently
-              <span className="text-xs font-normal text-muted-foreground">
-                Remove it from the database for good instead of keeping it as deleted.
-              </span>
             </Label>
           </div>
         ) : undefined
       }
-      consequence={
-        forGood
-          ? 'A permanent delete is final. The record and everything stored with it are erased and cannot be restored by anyone.'
-          : consequence
-      }
+      bodyHidden
       confirmLabel={forGood ? 'Delete permanently' : confirmLabel}
       destructive
       pending={pending}

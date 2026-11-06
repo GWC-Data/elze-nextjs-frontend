@@ -8,6 +8,7 @@ import { VersionBadge } from '@/components/common/metadata-lakehouse/VersionBadg
 import { cn } from '@/lib/utils'
 import { notify } from '@/lib/notify'
 import { connectorPresentation } from '@/lib/connectors'
+import { ConnectorMark } from '@/components/common/metadata-lakehouse/ConnectorMark'
 import { EMPTY, formatCount, formatDateTime, formatRelativeTime, maskSecretHint } from '@/lib/format'
 import type { Connection, SelectedDataset } from '@/types/metadataLakehouse'
 
@@ -99,14 +100,7 @@ function Hero({
       />
 
       <div className="relative flex flex-wrap items-start gap-5">
-        <span
-          className={cn(
-            'flex size-16 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 ring-black/5',
-            presentation.accentClass
-          )}
-        >
-          <presentation.icon className="size-8" aria-hidden />
-        </span>
+        <ConnectorMark provider={c.provider} size="lg" className="shadow-sm" />
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">

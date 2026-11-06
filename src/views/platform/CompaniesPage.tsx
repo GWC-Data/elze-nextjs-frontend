@@ -53,6 +53,21 @@ export default function CompaniesPage() {
       ),
     },
     {
+      key: 'admin',
+      header: 'Administrator',
+      render: (company) =>
+        company.primaryAdmin ? (
+          <div className="min-w-0">
+            <p className="truncate text-sm text-foreground">
+              {company.primaryAdmin.displayName || company.primaryAdmin.username}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">@{company.primaryAdmin.username}</p>
+          </div>
+        ) : (
+          <span className="text-sm text-muted-foreground">No administrator</span>
+        ),
+    },
+    {
       key: 'status',
       header: 'Status',
       width: 'w-32',

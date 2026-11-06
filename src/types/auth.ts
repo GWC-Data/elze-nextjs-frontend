@@ -14,6 +14,7 @@ export interface AuthUser {
   customRoleId?: string | null
   customRoleName?: string | null
   status: UserStatus
+  isDefaultAdmin?: boolean
   mustChangePassword: boolean
   lastLoginAt: string | null
   createdAt: string | null
@@ -50,12 +51,6 @@ export interface ClientSession {
   status: 'AUTHENTICATED' | 'PASSWORD_CHANGE_REQUIRED' | 'RESTORING' | 'UNAUTHENTICATED'
   user: AuthUser | null
   dashboards: AccessibleDashboard[]
-}
-
-export interface SessionSummary {
-  familyId: string
-  lastUsedAt: string
-  current: boolean
 }
 
 export interface ActivationTarget {

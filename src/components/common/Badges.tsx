@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import type { AccessLevel, RoleName, UserStatus } from '@/types/auth'
 import { ACCESS_LEVEL_LABELS, ROLE_LABELS } from '@/constants/labels'
+import { DEFAULT_ADMIN_LABEL } from '@/lib/peopleAccess'
 
 const ROLE_STYLE: Record<RoleName, { icon: ComponentType<{ className?: string }>; className: string }> = {
   SUPER_ADMIN: {
@@ -24,13 +25,21 @@ const ROLE_STYLE: Record<RoleName, { icon: ComponentType<{ className?: string }>
   },
 }
 
-export function RoleBadge({ role, className }: { role: RoleName; className?: string }) {
+export function RoleBadge({
+  role,
+  defaultAdmin = false,
+  className,
+}: {
+  role: RoleName
+  defaultAdmin?: boolean
+  className?: string
+}) {
   const style = ROLE_STYLE[role]
   const Icon = style.icon
   return (
     <Badge variant="outline" className={cn('gap-1 font-medium', style.className, className)}>
       <Icon className="size-3" aria-hidden />
-      {ROLE_LABELS[role]}
+      {defaultAdmin && role === 'COMPANY_ADMIN' ? DEFAULT_ADMIN_LABEL : ROLE_LABELS[role]}
     </Badge>
   )
 }

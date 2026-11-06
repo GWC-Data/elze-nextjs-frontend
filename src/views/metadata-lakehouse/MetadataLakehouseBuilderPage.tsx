@@ -10,7 +10,7 @@ import { Page } from '@/components/common/Page'
 import { usePaths } from '@/hooks/usePaths'
 import { ContextQueryProvider } from '@/context/QueryProvider'
 import { WorkflowProvider } from '@/context/WorkflowProvider'
-import { useWorkflow } from '@/context/workflowContext'
+import { WORKFLOW_STEPS, useWorkflow } from '@/context/workflowContext'
 import { Stepper } from '@/components/common/metadata-lakehouse/Stepper'
 import { CardSkeleton, TileSkeleton } from '@/components/common/metadata-lakehouse/DataStates'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -56,6 +56,8 @@ export default function MetadataLakehouseBuilderPage() {
   const { can } = useAuth()
   const initialConnectionId = params.get('connection')
   const versionId = params.get('version')
+  const stepParam = params.get('step')
+  const requestedStep = WORKFLOW_STEPS.find((s) => s.id === stepParam && s.id !== 'connect')?.id ?? null
 
   return (
     <ContextQueryProvider>
@@ -63,6 +65,7 @@ export default function MetadataLakehouseBuilderPage() {
         key={`${initialConnectionId ?? ''}:${versionId ?? 'draft'}`}
         connectionId={initialConnectionId}
         versionId={versionId}
+        requestedStep={requestedStep}
         canCreate={can('context.create')}
       />
     </ContextQueryProvider>
@@ -72,10 +75,12 @@ export default function MetadataLakehouseBuilderPage() {
 function BuilderRoot({
   connectionId,
   versionId,
+  requestedStep,
   canCreate,
 }: {
   connectionId: string | null
   versionId: string | null
+  requestedStep: WorkflowStepId | null
   canCreate: boolean
 }) {
   const resuming = Boolean(connectionId && !versionId)
@@ -91,7 +96,8 @@ function BuilderRoot({
 
   const state = resuming ? versions.data : undefined
   const saved = state?.draft?.currentStep as WorkflowStepId | null | undefined
-  const initialStep: WorkflowStepId | undefined = saved && saved !== 'connect' ? saved : undefined
+  const initialStep: WorkflowStepId | undefined =
+    resuming && requestedStep ? requestedStep : saved && saved !== 'connect' ? saved : undefined
   const initialFurthest: WorkflowStepId | undefined = initialStep
     ? initialStep
     : state?.latestPublished

@@ -1,15 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { KeyRound, LogOut, Monitor, ShieldCheck } from 'lucide-react'
-import { fetchSessions } from '@/api/auth.api'
-import { useAsync } from '@/hooks/useAsync'
+import { KeyRound, Lock, LogOut, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/context/authContext'
 import { usePaths } from '@/hooks/usePaths'
 import ChangePasswordForm from '@/components/common/auth/ChangePasswordForm'
 import { Page, PageHeader, Section } from '@/components/common/Page'
 import { AccessLevelBadge, RoleBadge, StatusBadge } from '@/components/common/Badges'
-import { EmptyState, ErrorState, InlineLoading } from '@/components/common/States'
+import { EmptyState } from '@/components/common/States'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { SHOW_ANALYTICS } from '@/constants/sections'
@@ -18,8 +16,6 @@ export default function ProfilePage() {
   const { user, dashboards, signOut } = useAuth()
   const paths = usePaths()
   const [changingPassword, setChangingPassword] = useState(false)
-
-  const sessions = useAsync(() => fetchSessions(), [])
 
   if (!user) return null
 
@@ -30,7 +26,7 @@ export default function ProfilePage() {
     <Page>
       <PageHeader
         title="Your account"
-        description="Your details, your password and the devices you are signed in on."
+        description="Your details and your password."
         actions={
           <Button variant="outline" onClick={() => void signOut()}>
             <LogOut aria-hidden />
@@ -43,25 +39,33 @@ export default function ProfilePage() {
         <Section title="Details">
           <dl className="grid gap-4 sm:grid-cols-2 text-sm">
             <div>
-              <dt className="text-xs text-muted-foreground">Name</dt>
-              <dd className="mt-1 font-medium text-foreground">
-                {user.displayName || user.username}
-              </dd>
+              <dt className="text-xs text-muted-foreground">Display name</dt>
+              <dd className="mt-1 font-medium text-foreground">{user.displayName || '—'}</dd>
             </div>
             <div>
               <dt className="text-xs text-muted-foreground">Username</dt>
-              <dd className="mt-1 text-foreground">{user.username}</dd>
+              <dd className="mt-1 flex items-center gap-1.5 text-foreground">
+                <Lock className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                {user.username}
+              </dd>
+              <p className="mt-0.5 text-xs text-muted-foreground">Usernames can’t be changed.</p>
             </div>
             <div className="sm:col-span-2">
               <dt className="text-xs text-muted-foreground">Email</dt>
               <dd className="mt-1 text-foreground">{user.email}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">Role</dt>
+              <dt className="text-xs text-muted-foreground">Account type</dt>
               <dd className="mt-1">
-                <RoleBadge role={user.role} />
+                <RoleBadge role={user.role} defaultAdmin={user.isDefaultAdmin} />
               </dd>
             </div>
+            {!isPlatform && user.role === 'USER' && (
+              <div>
+                <dt className="text-xs text-muted-foreground">Permissions</dt>
+                <dd className="mt-1 text-foreground">{user.customRoleName || 'Standard'}</dd>
+              </div>
+            )}
             <div>
               <dt className="text-xs text-muted-foreground">Status</dt>
               <dd className="mt-1">
@@ -86,6 +90,12 @@ export default function ProfilePage() {
               <dt className="text-xs text-muted-foreground">Joined</dt>
               <dd className="mt-1 text-foreground">
                 {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Last signed in</dt>
+              <dd className="mt-1 text-foreground">
+                {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : '—'}
               </dd>
             </div>
           </dl>
@@ -150,54 +160,6 @@ export default function ProfilePage() {
             )}
           </Section>
         )}
-
-        <Section
-          title="Signed in on"
-          description="Each is a browser that can refresh your session without a password."
-          flush
-        >
-          {sessions.error ? (
-            <ErrorState
-              error={sessions.error}
-              title="Unable to load your sessions"
-              onRetry={sessions.reload}
-              compact
-            />
-          ) : sessions.loading ? (
-            <InlineLoading label="Loading your sessions…" />
-          ) : (sessions.data ?? []).length === 0 ? (
-            <EmptyState title="No other sessions" compact />
-          ) : (
-            <ul className="divide-y divide-border">
-              {(sessions.data ?? []).map((session) => (
-                <li
-                  key={session.familyId}
-                  className="flex flex-wrap items-center justify-between gap-3 px-5 py-3"
-                >
-                  <span className="flex min-w-0 items-center gap-2.5">
-                    <Monitor className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                    <span className="min-w-0">
-                      <span className="block text-sm text-foreground">
-                        {session.current ? 'This browser' : 'Another browser'}
-                      </span>
-                      <span className="block text-xs text-muted-foreground">
-                        Last used {new Date(session.lastUsedAt).toLocaleString()}
-                      </span>
-                    </span>
-                  </span>
-                  {session.current && (
-                    <Badge
-                      variant="outline"
-                      className="border-success/25 bg-success/10 text-success"
-                    >
-                      Current
-                    </Badge>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Section>
       </div>
     </Page>
   )

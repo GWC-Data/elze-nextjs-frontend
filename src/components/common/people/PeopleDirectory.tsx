@@ -8,6 +8,7 @@ import { RoleBadge, StatusBadge } from '@/components/common/Badges'
 import { DeleteConfirmDialog } from '@/components/common/ConfirmDialog'
 import { ROLE_LABELS } from '@/constants/labels'
 import { notify } from '@/lib/notify'
+import { adminOutOfReach } from '@/lib/peopleAccess'
 import type { DeleteOptions } from '@/api/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -85,7 +86,7 @@ export function PeopleDirectory({
 
   const list = useServerList<UserListItem, Omit<PeopleQuery, keyof ListQuery>>(
     load,
-    { page: 1, pageSize: 15, sort: 'name', dir: 'asc' },
+    { page: 1, pageSize: 15, sort: 'email', dir: 'asc' },
     {
       role: roleFilter === ALL ? undefined : roleFilter,
       status: statusFilter === ALL ? undefined : statusFilter,
@@ -128,17 +129,17 @@ export function PeopleDirectory({
 
   const columns: ColumnDef<UserListItem>[] = [
     {
-      key: 'name',
-      header: 'Name',
-      serverSort: 'name',
-      render: (person) => (
-        <div className="min-w-0">
-          <p className="truncate font-medium text-foreground">
-            {person.displayName || person.username}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">{person.email}</p>
-        </div>
-      ),
+      key: 'email',
+      header: 'Email',
+      serverSort: 'email',
+      render: (person) => <span className="block truncate font-medium text-foreground">{person.email}</span>,
+    },
+    {
+      key: 'username',
+      header: 'Username',
+      width: 'w-40',
+      serverSort: 'username',
+      render: (person) => <span className="block truncate text-sm text-foreground">{person.username}</span>,
     },
     ...(showCompany
       ? [
@@ -160,17 +161,23 @@ export function PeopleDirectory({
       : []),
     {
       key: 'role',
-      header: 'Role',
+      header: 'Account type',
       width: 'w-40',
       serverSort: 'role',
+      render: (person) => <RoleBadge role={person.role} defaultAdmin={person.isDefaultAdmin} />,
+    },
+    {
+      key: 'permissions',
+      header: 'Permissions',
+      width: 'w-36',
+      secondary: true,
       render: (person) =>
-        person.customRoleName ? (
-          <span className="flex flex-col gap-0.5">
-            <RoleBadge role={person.role} />
-            <span className="text-xs text-muted-foreground">{person.customRoleName}</span>
+        person.role === 'USER' ? (
+          <span className="block truncate text-sm text-foreground">
+            {person.customRoleName || 'Standard'}
           </span>
         ) : (
-          <RoleBadge role={person.role} />
+          <span className="text-sm text-muted-foreground">—</span>
         ),
     },
     {
@@ -199,10 +206,11 @@ export function PeopleDirectory({
       width: 'w-14',
       render: (person) => {
         const isSelf = person.id === me?.id
-        const canDeactivate = !isSelf && can('user.deactivate')
-        const canActivate = !isSelf && can('user.activate')
-        const canInvite = can('user.update')
-        const canRemove = !isSelf && can('user.delete')
+        const outOfReach = adminOutOfReach(me, person)
+        const canDeactivate = !isSelf && !outOfReach && can('user.deactivate')
+        const canActivate = !isSelf && !outOfReach && can('user.activate')
+        const canInvite = !outOfReach && can('user.update')
+        const canRemove = !isSelf && !outOfReach && can('user.delete')
 
         if (!canDeactivate && !canActivate && !canInvite && !canRemove) return null
 
@@ -328,11 +336,11 @@ export function PeopleDirectory({
             )}
 
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger size="lg" className="w-40" aria-label="Filter by role">
+              <SelectTrigger size="lg" className="w-44" aria-label="Filter by account type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL}>All roles</SelectItem>
+                <SelectItem value={ALL}>All account types</SelectItem>
                 {roleOptions.map((role) => (
                   <SelectItem key={role} value={role}>
                     {ROLE_LABELS[role]}
@@ -363,7 +371,6 @@ export function PeopleDirectory({
         onOpenChange={(open) => !open && setRemoving(null)}
         title={removing ? `Delete ${removing.username}?` : ''}
         body="The account is removed from every list and its sessions end. Its username and email can be used again."
-        consequence="If this person should simply stop having access, deactivate them instead. That keeps the record and can be reversed."
         confirmLabel="Delete account"
         pending={removePending}
         onConfirm={(permanent) => void confirmRemove(permanent)}

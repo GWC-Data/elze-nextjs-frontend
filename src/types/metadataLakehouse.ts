@@ -29,6 +29,7 @@ export interface ContextAccess {
   isOwner: boolean
   canShare: boolean
   generalAccess: GeneralAccess
+  sharedWith?: number
 }
 
 export interface ContextSharePerson {
@@ -36,6 +37,7 @@ export interface ContextSharePerson {
   username: string
   email: string
   displayName: string | null
+  companyName?: string | null
 }
 
 export interface ContextLevelDef {
@@ -57,6 +59,20 @@ export interface ContextShareGroup {
   groupId: string
   name: string
   memberCount: number
+  companyName?: string | null
+}
+
+export interface ContextShareCompany {
+  companyId: string
+  name: string
+  memberCount: number
+}
+
+export interface ContextShareCompanyGrant extends ContextShareCompany {
+  level: ContextAccessLevel
+  levelId: string
+  grantedAt: string
+  active: boolean
 }
 
 export interface ContextShareGroupGrant extends ContextShareGroup {
@@ -66,12 +82,16 @@ export interface ContextShareGroupGrant extends ContextShareGroup {
   active: boolean
 }
 
+export type ContextShareScope = 'platform' | 'company'
+
 export interface ContextSharing {
+  scope?: ContextShareScope
   owner: ContextOwner | null
   generalAccess: GeneralAccess
   levels: ContextLevelDef[]
   people: ContextShareGrant[]
   groups?: ContextShareGroupGrant[]
+  companies?: ContextShareCompanyGrant[]
   you: { level: ContextAccessLevel; levelId: string | null; isOwner: boolean; canShare: boolean }
 }
 
@@ -88,7 +108,7 @@ export interface GroupSharedContext {
 
 export interface Connection {
   id: string
-  companyId: string
+  companyId: string | null
   provider: string
   name: string
   host: string

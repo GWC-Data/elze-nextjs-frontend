@@ -37,6 +37,7 @@ import { DeleteConfirmDialog } from '@/components/common/ConfirmDialog'
 import { UserOnboardingDialog } from '@/components/common/onboarding/UserOnboardingDialog'
 import { CompanyFeaturesSection } from '@/components/common/features/CompanyFeaturesSection'
 import { notify } from '@/lib/notify'
+import { DEFAULT_ADMIN_LABEL } from '@/lib/peopleAccess'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -265,6 +266,9 @@ export default function CompanyDetailPage() {
                               {admin.email}
                             </span>
                           </span>
+                          {admin.isDefaultAdmin ? (
+                            <span className="shrink-0 text-xs text-muted-foreground">{DEFAULT_ADMIN_LABEL}</span>
+                          ) : null}
                           <StatusBadge status={admin.status} />
                           <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                         </Link>
@@ -451,11 +455,6 @@ export default function CompanyDetailPage() {
         onOpenChange={setDeleting}
         title={`Delete ${record.name}?`}
         body="The company is removed from every list and its name can be used again."
-        consequence={
-          memberCount && memberCount > 0
-            ? `This company still has ${memberCount} ${memberCount === 1 ? 'account' : 'accounts'}. They must be deleted first. The server will refuse until they are.`
-            : undefined
-        }
         confirmLabel="Delete company"
         pending={deletePending}
         onConfirm={(permanent) => void confirmDelete(permanent)}

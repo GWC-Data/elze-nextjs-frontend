@@ -12,6 +12,7 @@ import type {
   Group,
   GroupDashboards,
   GroupDetail,
+  GroupMember,
   HealthStatus,
   ScopeOptions,
   UserGrant,
@@ -37,8 +38,8 @@ export const activateTeamMember = teamUsers.activate
 export const resendTeamActivation = teamUsers.resendActivation
 export const deleteTeamMember = teamUsers.remove
 
-export function listUserOptions(): Promise<UserOption[]> {
-  return get<UserOption[]>(endpoints.users.options)
+export function listUserOptions(companyId?: string): Promise<UserOption[]> {
+  return get<UserOption[]>(endpoints.users.options, companyId ? { params: { companyId } } : undefined)
 }
 
 export function fetchUserGrants(id: string): Promise<UserGrant[]> {
@@ -63,6 +64,10 @@ export function listGroups(): Promise<Group[]> {
 
 export function fetchGroup(id: string): Promise<GroupDetail> {
   return get<GroupDetail>(endpoints.groups.one(id))
+}
+
+export function fetchGroupMembers(id: string): Promise<GroupMember[]> {
+  return get<GroupMember[]>(endpoints.groups.members(id))
 }
 
 export function fetchGroupContexts(id: string): Promise<GroupSharedContext[]> {

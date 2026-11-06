@@ -5,6 +5,7 @@ import { SearchBox, SearchToolbar } from '@/components/common/SearchBox'
 import { cn } from '@/lib/utils'
 import type { Connector } from '@/types/metadataLakehouse'
 import { connectorGroups, connectorPresentation, isConnectable } from '@/lib/connectors'
+import { ConnectorMark } from '@/components/common/metadata-lakehouse/ConnectorMark'
 
 export function ConnectorGallery({
   connectors,
@@ -85,7 +86,6 @@ function ConnectorTile({
   onSelect?: () => void
 }) {
   const presentation = connectorPresentation(connector.id)
-  const Icon = presentation.icon
   const connectable = isConnectable(connector)
 
   const Wrapper = connectable ? 'button' : 'div'
@@ -109,14 +109,7 @@ function ConnectorTile({
       )}
     >
       <div className="flex w-full items-start justify-between gap-2">
-        <span
-          className={cn(
-            'flex size-9 items-center justify-center rounded-md',
-            connectable ? presentation.accentClass : 'bg-muted text-muted-foreground/60'
-          )}
-        >
-          <Icon className="size-4.5" aria-hidden />
-        </span>
+        <ConnectorMark provider={connector.id} size="sm" muted={!connectable} />
         {connectable ? null : (
           <Badge variant="outline" className="gap-1 text-muted-foreground">
             <Lock className="size-3" aria-hidden />

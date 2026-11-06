@@ -40,6 +40,7 @@ export interface AdkContextLayerSessionBody {
   contextName: string
   contextDescription?: string | null
   datasetIds: string[]
+  datasetOverviews?: Record<string, string>
   model?: string
 }
 

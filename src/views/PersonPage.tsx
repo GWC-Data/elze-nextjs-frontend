@@ -6,9 +6,7 @@ import { useAsync } from '@/hooks/useAsync'
 import { usePaths } from '@/hooks/usePaths'
 import { Page, PageHeader, Section } from '@/components/common/Page'
 import { PersonDetail } from '@/components/common/people/PersonDetail'
-import { RoleBadge, StatusBadge } from '@/components/common/Badges'
 import { CardGridSkeleton, ErrorState, NotFoundState } from '@/components/common/States'
-import { Badge } from '@/components/ui/badge'
 import { isUuid } from '@/lib/utils'
 import type { PeopleScope } from '@/views/PeoplePage'
 
@@ -64,30 +62,10 @@ export default function PersonPage({ scope }: { scope: PeopleScope }) {
 
   return (
     <Page>
-      <PageHeader
-        crumbs={[{ label: labels.list, to: paths.users }, { label: record.username }]}
-        title={record.displayName || record.username}
-        description={
-          <span className="flex flex-wrap items-center gap-2">
-            <RoleBadge role={record.role} />
-            {record.customRoleName ? <Badge variant="outline">{record.customRoleName}</Badge> : null}
-            <StatusBadge status={record.status} />
-            <span className="text-xs">{record.email}</span>
-            {scope === 'platform' ? (
-              record.companyName ? (
-                <Badge variant="outline">{record.companyName}</Badge>
-              ) : (
-                <Badge variant="outline" className="text-muted-foreground">
-                  Platform account
-                </Badge>
-              )
-            ) : null}
-          </span>
-        }
-      />
-
       <PersonDetail
         person={record}
+        crumbs={[{ label: labels.list, to: paths.users }, { label: record.displayName || record.username }]}
+        showCompany={scope === 'platform'}
         onChanged={person.reload}
         actions={{
           updateRole: (role, customRoleId) => api.update(record.id, { role, customRoleId }),

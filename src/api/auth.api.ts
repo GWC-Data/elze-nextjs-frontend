@@ -1,6 +1,6 @@
 import { get, post } from '@/api/client'
 import { endpoints } from '@/api/endpoints'
-import type { ActivationTarget, ResetTarget, SessionResponse, SessionSummary } from '@/types/auth'
+import type { ActivationTarget, ResetTarget, SessionResponse } from '@/types/auth'
 
 export function login(identifier: string, password: string): Promise<SessionResponse> {
   return post<SessionResponse>(endpoints.auth.login, { identifier, password }, { renewOnExpiry: false })
@@ -8,10 +8,6 @@ export function login(identifier: string, password: string): Promise<SessionResp
 
 export function logout(): Promise<{ state: 'UNAUTHENTICATED' }> {
   return post<{ state: 'UNAUTHENTICATED' }>(endpoints.auth.logout, undefined, { renewOnExpiry: false })
-}
-
-export function fetchSessions(): Promise<SessionSummary[]> {
-  return get<SessionSummary[]>(endpoints.auth.sessions)
 }
 
 export function changePassword(currentPassword: string, newPassword: string): Promise<SessionResponse> {
