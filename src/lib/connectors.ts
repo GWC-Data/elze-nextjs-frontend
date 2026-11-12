@@ -1,6 +1,16 @@
 import { Database } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Connector, CredentialField } from '@/types/metadataLakehouse'
+import bigqueryLogo from '@/assets/connectors/bigquery.svg'
+import databricksLogo from '@/assets/connectors/databricks.svg'
+import domoLogo from '@/assets/connectors/domo.svg'
+import postgresLogo from '@/assets/connectors/postgres.svg'
+import redshiftLogo from '@/assets/connectors/redshift.svg'
+import snowflakeLogo from '@/assets/connectors/snowflake.svg'
+
+function srcOf(asset: string | { src: string }): string {
+  return typeof asset === 'string' ? asset : asset.src
+}
 
 export interface ConnectorPresentation {
   id: string
@@ -8,11 +18,15 @@ export interface ConnectorPresentation {
   tagline: string
   icon: LucideIcon
   hostLabel: string
+  logo?: string
+  logoFills?: boolean
 }
 
 const PRESENTATION: Record<string, ConnectorPresentation> = {
   domo: {
     id: 'domo',
+    logo: srcOf(domoLogo),
+    logoFills: true,
     accentClass: 'bg-sky-50 text-sky-600 dark:bg-sky-950/50 dark:text-sky-400',
     tagline: 'Connect with an access token',
     icon: Database,
@@ -20,6 +34,7 @@ const PRESENTATION: Record<string, ConnectorPresentation> = {
   },
   snowflake: {
     id: 'snowflake',
+    logo: srcOf(snowflakeLogo),
     accentClass: 'bg-cyan-50 text-cyan-600 dark:bg-cyan-950/50 dark:text-cyan-400',
     tagline: 'Account, database, key pair',
     icon: Database,
@@ -27,6 +42,7 @@ const PRESENTATION: Record<string, ConnectorPresentation> = {
   },
   databricks: {
     id: 'databricks',
+    logo: srcOf(databricksLogo),
     accentClass: 'bg-orange-50 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400',
     tagline: 'Workspace URL and token',
     icon: Database,
@@ -34,6 +50,7 @@ const PRESENTATION: Record<string, ConnectorPresentation> = {
   },
   bigquery: {
     id: 'bigquery',
+    logo: srcOf(bigqueryLogo),
     accentClass: 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400',
     tagline: 'Project and service account',
     icon: Database,
@@ -41,6 +58,7 @@ const PRESENTATION: Record<string, ConnectorPresentation> = {
   },
   redshift: {
     id: 'redshift',
+    logo: srcOf(redshiftLogo),
     accentClass: 'bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-400',
     tagline: 'Cluster and credentials',
     icon: Database,
@@ -48,6 +66,7 @@ const PRESENTATION: Record<string, ConnectorPresentation> = {
   },
   postgres: {
     id: 'postgres',
+    logo: srcOf(postgresLogo),
     accentClass: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400',
     tagline: 'Host, database and role',
     icon: Database,

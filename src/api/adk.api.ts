@@ -105,12 +105,14 @@ export function createContextLayerSession(
   contextId: string,
   body: AdkContextLayerSessionBody
 ): Promise<AdkSessionSummary> {
+  const overviews = body.datasetOverviews ?? {}
   return createSession(contextId, 'context_layer_extractor', {
     ...(body.model ? { model: body.model } : {}),
     version_id: body.versionId,
     context_name: body.contextName,
     context_description: body.contextDescription ?? null,
     dataset_ids: body.datasetIds,
+    ...(Object.keys(overviews).length > 0 ? { initial_state: { dataset_overviews: overviews } } : {}),
   })
 }
 

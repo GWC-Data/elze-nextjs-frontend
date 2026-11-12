@@ -6,12 +6,8 @@ import { notify } from '@/lib/notify'
 import { formatRelativeTime } from '@/lib/format'
 import { endpoints } from '@/api/endpoints'
 import { errorMessage } from '@/api/client'
-import { ExtractionStoppedError } from '@/api/extraction.api'
-import type { BusinessContextOutcome } from '@/api/extraction.api'
-import { useAuth } from '@/context/authContext'
 import { useWorkflow } from '@/context/workflowContext'
 import {
-  useApplyBusinessContext,
   useConnection,
   useExtraction,
   useProfileOverview,
@@ -44,17 +40,7 @@ import {
   useBusinessLayerDraft,
   type SaveState,
 } from '@/components/common/metadata-lakehouse/business-layer/useBusinessLayerDraft'
-import { composeBusinessBrief } from '@/components/common/metadata-lakehouse/business-layer/businessBrief'
-
-function reportBusinessContext(outcome: BusinessContextOutcome | undefined): boolean {
-  if (!outcome || outcome.status === 'applied') return false
-  if (outcome.status === 'stopped') {
-    notify.info('Business layer not applied.', 'The analysis stopped before it was applied. Run Analyse with AI again to apply it.')
-  } else {
-    notify.warning('Business layer not applied.', `${outcome.error} Run Analyse with AI again to apply it.`)
-  }
-  return true
-}
+import { filled } from '@/components/common/metadata-lakehouse/business-layer/businessLayerModel'
 
 function SaveStatus({
   state,
@@ -123,11 +109,9 @@ function BusinessLayerSkeleton() {
 
 export function BusinessLayerStep() {
   const { connectionId, activeTableId, setActiveTableId, goToStep, next, readOnly } = useWorkflow()
-  const { user } = useAuth()
   const overview = useProfileOverview(connectionId)
   const connection = useConnection(connectionId)
   const runExtraction = useRunExtraction(connectionId)
-  const applyContext = useApplyBusinessContext(connectionId)
   const saved = useExtraction(connectionId, !readOnly)
   const draft = useBusinessLayerDraft(connectionId, readOnly)
   const attachments = useAttachments()
@@ -152,11 +136,7 @@ export function BusinessLayerStep() {
   }, [saved.data, datasetIds])
 
   const { layer } = draft
-  const organizationName = draft.query.data?.organizationName ?? user?.companyName ?? null
-  const brief = useMemo(
-    () => composeBusinessBrief(layer, { organizationName, tables }),
-    [layer, organizationName, tables]
-  )
+  const hasOverview = datasetIds.some((id) => filled(layer.tables[id]))
 
   const layerUpdatedAt = draft.query.data?.updatedAt ?? null
   const extractedAt = saved.data?.extractedAt ?? null
@@ -164,46 +144,23 @@ export function BusinessLayerStep() {
     draft.edited || Boolean(layerUpdatedAt && (!extractedAt || Date.parse(layerUpdatedAt) > Date.parse(extractedAt)))
 
   const needsExtraction = !reusable || attachments.files.length > 0
-  const needsContext = !needsExtraction && changedSinceAnalysis && brief !== '' && Boolean(saved.data?.sessionId)
-  const runs = needsExtraction ? (brief ? 2 : 1) : needsContext ? 1 : 0
-  const credit = useCreditCheck('context.build', Math.max(runs, 1))
-  const busy = runExtraction.isPending || applyContext.isPending
+  const needsRerun = !needsExtraction && changedSinceAnalysis
+  const analysisDue = needsExtraction || needsRerun
+  const credit = useCreditCheck('context.build')
+  const busy = runExtraction.isPending
 
   const setTableOverview = (id: string, text: string) =>
     draft.update((current) => ({ ...current, tables: { ...current.tables, [id]: text } }))
 
   const analyse = async (): Promise<boolean> => {
     try {
-      const result = await runExtraction.mutateAsync({
-        datasetIds,
-        files: attachments.files,
-        businessContext: brief || undefined,
-      })
+      const result = await runExtraction.mutateAsync({ datasetIds, files: attachments.files })
       reportUnconfirmedExtraction(result)
       attachments.clear()
-      if (reportBusinessContext(result.businessContext)) await draft.touch()
-      else draft.markAnalysed()
+      draft.markAnalysed()
       return true
     } catch (err) {
       reportExtractionError(err)
-      return false
-    }
-  }
-
-  const applyOnly = async (): Promise<boolean> => {
-    const run = saved.data
-    if (!run) return true
-    try {
-      await applyContext.mutateAsync({ sessionId: run.sessionId, report: run.text, datasetIds, request: brief })
-      draft.markAnalysed()
-      notify.success('Business layer applied.', 'Descriptions, glossary terms and metrics now follow your business layer.')
-      return true
-    } catch (err) {
-      if (err instanceof ExtractionStoppedError) {
-        notify.info('Stopped.', 'The business layer was not applied.')
-      } else {
-        notify.failure('apply the business layer', err)
-      }
       return false
     }
   }
@@ -221,42 +178,30 @@ export function BusinessLayerStep() {
     )
   }
 
-  const applying = applyContext.isPending
-
   return (
     <StepFrame
       title="Business Layer"
       description="Describe each selected table in your own words so the analyst agent understands your data and answers accurately."
-      nextLabel={runs > 0 ? 'Analyse with AI' : 'Next'}
-      nextExtra={runs > 0 ? <CreditCost action="context.build" runs={runs} onPrimary /> : undefined}
+      nextLabel={analysisDue ? 'Analyse with AI' : 'Next'}
+      nextExtra={analysisDue ? <CreditCost action="context.build" onPrimary /> : undefined}
       nextPending={busy}
-      nextDisabled={datasetIds.length === 0 || (runs > 0 && credit.short)}
+      nextDisabled={datasetIds.length === 0 || (analysisDue && credit.short)}
       pendingLabel="Analysing..."
-      pendingOverlay={
-        applying
-          ? {
-              title: 'Applying your business layer',
-              detail:
-                'The AI is updating table descriptions, glossary terms and metrics from your business layer. This usually takes a minute or two. Keep this tab open.',
-              action: <StopExtractionButton run={applyContext} />,
-            }
-          : {
-              title: 'Analysing your data with AI',
-              detail: `Reading ${datasetIds.length} dataset${datasetIds.length === 1 ? '' : 's'}${
-                attachments.files.length
-                  ? ` and ${attachments.files.length} attached file${attachments.files.length === 1 ? '' : 's'}`
-                  : ''
-              }${brief ? ' with your business layer' : ''} to build the business glossary, metrics and relationships. This can take a few minutes. Keep this tab open.`,
-              action: <StopExtractionButton run={runExtraction} />,
-            }
-      }
+      pendingOverlay={{
+        title: 'Analysing your data with AI',
+        detail: `Reading ${datasetIds.length} dataset${datasetIds.length === 1 ? '' : 's'}${
+          attachments.files.length
+            ? ` and ${attachments.files.length} attached file${attachments.files.length === 1 ? '' : 's'}`
+            : ''
+        }${hasOverview ? ' with your business layer' : ''} to build the business glossary, metrics and relationships. This can take a few minutes. Keep this tab open.`,
+        action: <StopExtractionButton run={runExtraction} />,
+      }}
       onNext={async () => {
         if (!(await draft.flush())) {
           notify.error("Your business layer couldn't be saved.", 'Check your connection, then try again.')
           return false
         }
-        if (needsExtraction) return analyse()
-        if (needsContext) return applyOnly()
+        if (analysisDue) return analyse()
         return true
       }}
       refreshing={overview.isFetching && !overview.isPending}
@@ -304,10 +249,10 @@ export function BusinessLayerStep() {
         )
       }
       footerNote={
-        runs > 0 && credit.reason
+        analysisDue && credit.reason
           ? credit.reason
-          : needsContext
-            ? 'The business layer changed since the last analysis. Analyse with AI applies it without re-reading the data.'
+          : needsRerun
+            ? 'The business layer changed since the last analysis. Analyse with AI runs the analysis again with it.'
             : !needsExtraction && extractedAt
               ? `AI analysis saved ${formatRelativeTime(extractedAt)} · Next opens it without re-running`
               : undefined

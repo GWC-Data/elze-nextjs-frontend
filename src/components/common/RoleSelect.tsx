@@ -44,6 +44,8 @@ export function RoleSelect({
   companyId,
   disabled,
   label = 'Role',
+  hideHint = false,
+  inline = false,
 }: {
   value: RoleName
   onChange: (role: RoleName) => void
@@ -51,18 +53,20 @@ export function RoleSelect({
   companyId?: string | null
   disabled?: boolean
   label?: string
+  hideHint?: boolean
+  inline?: boolean
 }) {
   const id = useId()
   const assignable = useAssignableRoles(scope, companyId)
   const options = assignable.includes(value) ? assignable : [value, ...assignable]
 
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-xs font-medium text-foreground">
+    <div className={inline ? 'flex items-center gap-4' : 'space-y-1.5'}>
+      <Label htmlFor={id} className={inline ? 'w-28 shrink-0 text-sm font-normal text-muted-foreground' : 'text-xs font-medium text-foreground'}>
         {label}
       </Label>
       <Select value={value} onValueChange={(next) => onChange(next as RoleName)} disabled={disabled}>
-        <SelectTrigger id={id} className="w-full">
+        <SelectTrigger id={id} className={inline ? 'w-40' : 'w-full'}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -73,7 +77,7 @@ export function RoleSelect({
           ))}
         </SelectContent>
       </Select>
-      <p className="text-xs text-muted-foreground">{ROLE_DESCRIPTIONS[value]}</p>
+      {hideHint || inline ? null : <p className="text-xs text-muted-foreground">{ROLE_DESCRIPTIONS[value]}</p>}
     </div>
   )
 }

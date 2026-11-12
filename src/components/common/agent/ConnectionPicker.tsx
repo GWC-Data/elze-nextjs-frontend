@@ -3,12 +3,12 @@ import { Database } from "lucide-react"
 
 import { useConnections } from "@/hooks/useMetadataLakehouse"
 import { ContextQueryProvider } from "@/context/QueryProvider"
-import { connectorPresentation } from "@/lib/connectors"
 import { formatRelativeTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/workbench/badge"
 import { EmptyState, ErrorState, InlineLoading } from "@/components/common/States"
 import type { Connection } from "@/types/metadataLakehouse"
+import { ConnectorMark } from "@/components/common/metadata-lakehouse/ConnectorMark"
 
 export function ConnectionPicker(props: { onSelect: (connectionId: string) => void }) {
   return (
@@ -73,7 +73,6 @@ function ConnectionRow({
   connection: Connection
   onSelect: (connectionId: string) => void
 }) {
-  const presentation = connectorPresentation(connection.provider)
   const connected = connection.status === 'connected'
 
   return (
@@ -88,9 +87,7 @@ function ConnectionRow({
           connected ? "hover:border-primary/40 hover:bg-accent/30" : "cursor-not-allowed opacity-60"
         )}
       >
-        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-md", presentation.accentClass)}>
-          <presentation.icon className="size-4" aria-hidden />
-        </span>
+        <ConnectorMark provider={connection.provider} size="sm" />
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
             <span className="truncate text-sm font-medium text-foreground">{connection.name}</span>

@@ -25,6 +25,14 @@ export const PAGE_ABILITIES = {
   DashboardsPage: ['access.grant', 'dashboard.create', 'dashboard.delete', 'delete.permanent'],
   DataAnalystPage: ['context.read'],
   DeletedItemsPage: ['delete.permanent'],
+  GroupPage: [
+    'access.grant',
+    'access.revoke',
+    'context.read',
+    'delete.permanent',
+    'group.delete',
+    'group.update',
+  ],
   GroupsPage: [
     'access.grant',
     'access.revoke',
@@ -38,6 +46,7 @@ export const PAGE_ABILITIES = {
   LibraryAgentPage: ['delete.permanent', ...AGENT_ACTIONS],
   MetadataLakehouseBuilderPage: ['context.create', 'context.publish'],
   MetadataLakehousePage: ['context.create', 'delete.permanent'],
+  MetadataLakehouseConnectorsPage: ['context.create'],
   NotFoundPage: ['context.read', 'dashboard.read'],
   OverviewPage: ['access.read', 'context.read', 'dashboard.read', 'group.read', 'user.read'],
   PeoplePage: ['delete.permanent', 'role.read', ...USER_ACTIONS],

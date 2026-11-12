@@ -3,6 +3,7 @@ import { endpoints } from '@/api/endpoints'
 import type {
   ContextAccessLevel,
   ContextLevelDef,
+  ContextShareCompany,
   ContextShareGroup,
   ContextSharePerson,
   ContextSharing,
@@ -55,6 +56,23 @@ export async function shareContextWithGroup(
 
 export async function unshareContextWithGroup(connectionId: string, groupId: string): Promise<ContextSharing> {
   return remember(await contextHttp.delete<ContextSharing>(endpoints.context.accessGroup(connectionId, groupId)))
+}
+
+export function listShareableCompanies(connectionId: string): Promise<ContextShareCompany[]> {
+  return contextHttp.get<ContextShareCompany[]>(endpoints.context.accessCompanies(connectionId))
+}
+
+export async function shareContextWithCompany(
+  connectionId: string,
+  companyId: string,
+  level: ContextAccessLevel
+): Promise<ContextSharing> {
+  const levelId = await contextLevelId(connectionId, level)
+  return remember(await contextHttp.put<ContextSharing>(endpoints.context.accessCompany(connectionId, companyId), { levelId }))
+}
+
+export async function unshareContextWithCompany(connectionId: string, companyId: string): Promise<ContextSharing> {
+  return remember(await contextHttp.delete<ContextSharing>(endpoints.context.accessCompany(connectionId, companyId)))
 }
 
 export async function setGeneralAccess(connectionId: string, generalAccess: GeneralAccess): Promise<ContextSharing> {

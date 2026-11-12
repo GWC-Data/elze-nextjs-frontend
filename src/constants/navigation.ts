@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Layers,
   ListChecks,
+  Plug,
   Home,
   Network,
   History,
@@ -73,6 +74,7 @@ function lakehouse(paths: AppPaths): NavItem {
     icon: Layers,
     permission: 'context.read',
     children: [
+      { label: 'Connectors', path: paths.metadataLakehouseConnectors, icon: Plug, permission: 'context.read' },
       { label: 'Drafts', path: paths.metadataLakehouseDrafts, icon: FilePen, permission: 'context.read' },
       { label: 'Published', path: paths.metadataLakehousePublished, icon: CircleCheck, permission: 'context.read' },
     ],

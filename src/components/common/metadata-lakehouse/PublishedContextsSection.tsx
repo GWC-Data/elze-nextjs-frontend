@@ -1,7 +1,20 @@
 import { useDeferredValue, useState } from 'react'
 import type React from 'react'
 import { Link, useNavigate } from '@/lib/router'
-import { GitBranchPlus, History, Trash2, MoreHorizontal, Plug, Share2, Table2, User } from 'lucide-react'
+import {
+  Building2,
+  Clock,
+  GitBranchPlus,
+  History,
+  Layers,
+  MoreHorizontal,
+  Plug,
+  Share2,
+  Sparkles,
+  Table2,
+  Trash2,
+  User,
+} from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,15 +25,29 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ErrorState } from '@/components/common/States'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DeleteConfirmDialog } from '@/components/common/ConfirmDialog'
 import { notify } from '@/lib/notify'
 import { cn } from '@/lib/utils'
-import { useCompanyPublished, useCreateVersion, useDeleteVersion } from '@/hooks/useMetadataLakehouse'
-import { connectorPresentation } from '@/lib/connectors'
+import {
+  useCompanyPublished,
+  useCreateVersion,
+  useDeleteConnection,
+  useDeleteVersion,
+} from '@/hooks/useMetadataLakehouse'
+import { ConnectorMark } from '@/components/common/metadata-lakehouse/ConnectorMark'
 import { Pagination } from '@/components/common/Pagination'
 import { serverPage } from '@/hooks/usePagination'
 import { formatDateTime, formatExact, formatRelativeTime } from '@/lib/format'
 import type { McpTarget, PublishedContextGroup, PublishedVersionEntry } from '@/types/metadataLakehouse'
+import { useAuth } from '@/context/authContext'
+import {
+  LevelChip,
+  LivePill,
+  OwnerChip,
+  SharingChip,
+  StatTile,
+} from '@/components/common/metadata-lakehouse/ContextCardParts'
 
 export interface ShareTarget {
   id: string
@@ -30,7 +57,6 @@ import { Hint } from '@/components/common/Hint'
 import { accessAtLeast } from '@/lib/contextAccess'
 
 const PAGE_SIZE = 10
-const PREVIEW = 3
 
 export function PublishedContextsSection({
   builderPath,
@@ -119,14 +145,31 @@ function PublishedContextCard({
   onMcp: (target: McpTarget) => void
   onShare: (target: ShareTarget) => void
 }) {
-  const [showAll, setShowAll] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const { user } = useAuth()
+  const platformConsole = user?.companyId === null
   const [deleting, setDeleting] = useState<PublishedVersionEntry | null>(null)
   const access = group.access ?? null
   const canEdit = accessAtLeast(access, 'edit')
   const canDelete = accessAtLeast(access, 'full')
   const remove = useDeleteVersion()
+  const removeConnection = useDeleteConnection()
+  const [removingContext, setRemovingContext] = useState(false)
   const create = useCreateVersion(group.connectionId)
   const navigate = useNavigate()
+
+  const confirmRemoveContext = async (permanent: boolean) => {
+    try {
+      await removeConnection.mutateAsync({ id: group.connectionId, permanent })
+      notify.success(
+        `${group.name} was ${permanent ? 'permanently removed' : 'removed'}.`,
+        permanent ? 'Its stored credential was erased.' : undefined
+      )
+      setRemovingContext(false)
+    } catch (err) {
+      notify.failure(`remove ${group.name}`, err)
+    }
+  }
 
   const startNewVersion = async () => {
     try {
@@ -140,10 +183,7 @@ function PublishedContextCard({
       notify.failure(`create a new version of ${group.name}`, err)
     }
   }
-  const presentation = connectorPresentation(group.provider)
   const live = group.versions[0]
-  const shown = showAll ? group.versions : group.versions.slice(0, PREVIEW)
-  const nextLive = group.versions.find((v) => !v.live) ?? null
 
   const confirmDelete = async (permanent: boolean) => {
     if (!deleting) return
@@ -167,11 +207,13 @@ function PublishedContextCard({
     navigate(versionPath(live.id))
   }
 
+  const openLabel = `Open ${group.name} ${live.label}`
+
   return (
     <article
       role="link"
       tabIndex={0}
-      aria-label={`Open ${group.name} ${live.label}`}
+      aria-label={openLabel}
       onClick={openLive}
       onKeyDown={(event) => {
         if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
@@ -179,27 +221,25 @@ function PublishedContextCard({
           navigate(versionPath(live.id))
         }
       }}
-      className="flex cursor-pointer flex-col rounded-xl border bg-card shadow-xs transition-colors hover:border-primary/40 hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="group flex cursor-pointer flex-col rounded-2xl border bg-card shadow-xs transition-all hover:-translate-y-px hover:border-primary/30 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
-      <header className="flex items-start gap-3 p-4 pb-3">
-        <span
-          className={cn('flex size-9 shrink-0 items-center justify-center rounded-md', presentation.accentClass)}
-        >
-          <presentation.icon className="size-4" aria-hidden />
-        </span>
+      <header className="flex items-start gap-3 p-5 pb-4">
+        <ConnectorMark provider={group.provider} />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="min-w-0 truncate text-sm font-semibold">{group.name}</span>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="min-w-0 truncate text-base font-semibold tracking-tight">{group.name}</span>
+            <LivePill label={live.label} />
           </div>
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
-            {group.connectionName} · {group.host}
+            {group.connectionName !== group.name ? `${group.connectionName} · ` : ''}
+            {group.host}
           </p>
         </div>
 
         {access ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label={`Options for ${group.name}`}>
+              <Button variant="ghost" size="icon-sm" className="-mt-0.5 -mr-1.5" aria-label={`Options for ${group.name}`}>
                 <MoreHorizontal aria-hidden />
               </Button>
             </DropdownMenuTrigger>
@@ -222,94 +262,149 @@ function PublishedContextCard({
                   Share…
                 </DropdownMenuItem>
               ) : null}
-              <DropdownMenuSeparator />
-              {canEdit ? (
-                <DropdownMenuItem disabled={create.isPending} onSelect={() => void startNewVersion()}>
-                  <GitBranchPlus aria-hidden />
-                  {create.isPending ? 'Creating…' : 'Create new version'}
-                </DropdownMenuItem>
-              ) : null}
+              <DropdownMenuItem onSelect={() => setHistoryOpen(true)}>
+                <History aria-hidden />
+                Version history…
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link to={datasetsPath}>
                   <Table2 aria-hidden />
                   Datasets
                 </Link>
               </DropdownMenuItem>
+              {canDelete ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onSelect={() => setRemovingContext(true)}>
+                    <Trash2 aria-hidden />
+                    Remove context
+                  </DropdownMenuItem>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         ) : null}
       </header>
 
-      <div className="border-t px-4 py-3">
-        <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          <History className="size-3" aria-hidden />
-          Version history ({group.versions.length})
-        </p>
-        <ol className="relative space-y-0.5">
-          {shown.map((v, i) => (
-            <li key={v.id} className="relative flex gap-3 pb-2 last:pb-0">
-              <span className="relative flex w-3 shrink-0 justify-center">
-                <span
-                  className={cn(
-                    'mt-1.5 size-2.5 rounded-full ring-2 ring-card',
-                    v.live ? 'bg-emerald-500' : 'bg-muted-foreground/40'
-                  )}
-                  aria-hidden
-                />
-                {i < shown.length - 1 ? (
-                  <span className="absolute top-4 bottom-0 w-px bg-border" aria-hidden />
-                ) : null}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Link
-                    to={versionPath(v.id)}
-                    className="font-mono text-xs font-semibold hover:text-primary hover:underline"
-                    aria-label={`Open ${group.name} ${v.label}`}
-                  >
-                    {v.label}
-                  </Link>
-                  {v.live ? (
-                    <Badge className="h-4 bg-emerald-600 px-1.5 text-[10px] hover:bg-emerald-600">Live</Badge>
-                  ) : (
-                    <Badge variant="outline" className="h-4 px-1.5 text-[10px] text-muted-foreground">
-                      Superseded
-                    </Badge>
-                  )}
-                  <Hint label={formatDateTime(v.publishedAt)}><span className="text-xs text-muted-foreground">
-                    published {formatRelativeTime(v.publishedAt)}
-                  </span></Hint>
-                </div>
-                <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-[11px] text-muted-foreground">
-                  <span className="inline-flex items-center gap-1">
-                    <User className="size-3" aria-hidden />
-                    {v.publishedBy ?? 'unknown'}
-                  </span>
-                  <span>
-                    {formatExact(v.objectCount)} fact{v.objectCount === 1 ? '' : 's'}
-                  </span>
-                </p>
-              </div>
-              {canDelete ? (
-                <Hint label={`Delete ${v.label} only`}><Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="shrink-0 text-muted-foreground hover:text-destructive"
-                  aria-label={`Delete ${group.name} ${v.label}`}
-                  onClick={() => setDeleting(v)}
-                >
-                  <Trash2 className="size-3.5" aria-hidden />
-                </Button></Hint>
-              ) : null}
-            </li>
-          ))}
-        </ol>
-        {group.versions.length > PREVIEW ? (
-          <Button variant="link" size="sm" className="mt-1 h-auto px-0 text-xs" onClick={() => setShowAll(!showAll)}>
-            {showAll ? 'Show fewer' : `Show all ${group.versions.length} versions`}
+      <div className="grid grid-cols-3 gap-2 px-5">
+        <StatTile icon={Sparkles} label="Facts" value={formatExact(live.objectCount)} />
+        <StatTile icon={Layers} label="Versions" value={formatExact(group.versions.length)} />
+        <StatTile
+          icon={Clock}
+          label="Published"
+          value={formatRelativeTime(live.publishedAt)}
+          hint={`${formatDateTime(live.publishedAt)}${live.publishedBy ? ` by ${live.publishedBy}` : ''}`}
+        />
+      </div>
+
+      <footer className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-t px-5 py-3">
+        <OwnerChip access={access} />
+        <SharingChip access={access} platform={group.companyId === null} />
+        <LevelChip access={access} />
+        {platformConsole ? (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+            <Building2 className="size-3" aria-hidden />
+            {group.companyName ?? 'Platform'}
+          </span>
+        ) : null}
+        {canEdit ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto"
+            disabled={create.isPending}
+            onClick={() => void startNewVersion()}
+          >
+            <GitBranchPlus className="size-4" aria-hidden />
+            {create.isPending ? 'Creating…' : 'New version'}
           </Button>
         ) : null}
-      </div>
+      </footer>
+
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="size-4" aria-hidden />
+              Version history
+            </DialogTitle>
+            <DialogDescription>
+              {group.name} · {group.versions.length} version{group.versions.length === 1 ? '' : 's'}
+            </DialogDescription>
+          </DialogHeader>
+          <ol className="relative max-h-[60vh] space-y-0.5 overflow-y-auto pr-1">
+            {group.versions.map((v, i) => (
+              <li key={v.id} className="relative flex gap-3 pb-2 last:pb-0">
+                <span className="relative flex w-3 shrink-0 justify-center">
+                  <span
+                    className={cn(
+                      'mt-1.5 size-2.5 rounded-full ring-2 ring-card',
+                      v.live ? 'bg-success' : 'bg-muted-foreground/40'
+                    )}
+                    aria-hidden
+                  />
+                  {i < group.versions.length - 1 ? (
+                    <span className="absolute top-4 bottom-0 w-px bg-border" aria-hidden />
+                  ) : null}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Link
+                      to={versionPath(v.id)}
+                      className="font-mono text-xs font-semibold hover:text-primary hover:underline"
+                      aria-label={`Open ${group.name} ${v.label}`}
+                    >
+                      {v.label}
+                    </Link>
+                    {v.live ? (
+                      <Badge className="h-4 bg-success px-1.5 text-[10px] text-white hover:bg-success">Live</Badge>
+                    ) : (
+                      <Badge variant="outline" className="h-4 px-1.5 text-[10px] text-muted-foreground">
+                        Superseded
+                      </Badge>
+                    )}
+                    <Hint label={formatDateTime(v.publishedAt)}>
+                      <span className="text-xs text-muted-foreground">published {formatRelativeTime(v.publishedAt)}</span>
+                    </Hint>
+                  </div>
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-[11px] text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <User className="size-3" aria-hidden />
+                      {v.publishedBy ?? 'unknown'}
+                    </span>
+                    <span>
+                      {formatExact(v.objectCount)} fact{v.objectCount === 1 ? '' : 's'}
+                    </span>
+                  </p>
+                </div>
+                {canDelete ? (
+                  <Hint label={`Delete ${v.label} only`}>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                      aria-label={`Delete ${group.name} ${v.label}`}
+                      onClick={() => setDeleting(v)}
+                    >
+                      <Trash2 className="size-3.5" aria-hidden />
+                    </Button>
+                  </Hint>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        </DialogContent>
+      </Dialog>
+
+      <DeleteConfirmDialog
+        open={removingContext}
+        onOpenChange={(open) => !open && setRemovingContext(false)}
+        title={`Remove ${group.name}?`}
+        body="The context, its draft and every published version disappear from every list and can no longer be opened."
+        confirmLabel="Remove context"
+        pending={removeConnection.isPending}
+        onConfirm={(permanent) => void confirmRemoveContext(permanent)}
+      />
 
       <DeleteConfirmDialog
         open={deleting !== null}
@@ -321,13 +416,6 @@ function PublishedContextCard({
                 deleting.objectCount === 1 ? '' : 's'
               }. Every other version of “${group.name}” and any open draft stay exactly as they are.`
             : ''
-        }
-        consequence={
-          deleting?.live
-            ? nextLive
-              ? `${deleting.label} is the live version. ${nextLive.label} becomes the live version.`
-              : `${deleting.label} is the only version, so “${group.name}” will no longer be listed as published.`
-            : undefined
         }
         confirmLabel={deleting ? `Delete ${deleting.label}` : 'Delete'}
         pending={remove.isPending}

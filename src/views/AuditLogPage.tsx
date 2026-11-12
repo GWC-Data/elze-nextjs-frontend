@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { SHOW_ANALYTICS } from '@/constants/sections'
-import type { AuditLogEntry, AuditLogPage as AuditPage, AuditScope } from '@/types/admin'
+import type { AuditField, AuditLogEntry, AuditLogPage as AuditPage, AuditScope } from '@/types/admin'
 
 const HEADINGS: Record<AuditScope, { title: string; description: string; empty: string }> = {
   all: {
@@ -49,15 +49,15 @@ const TONE_CLASS: Record<AuditLogEntry['tone'], string> = {
   neutral: 'border-border bg-muted text-muted-foreground',
 }
 
-function inspectRows(entry: AuditLogEntry): Array<[string, unknown]> {
+function sentence(text: string): string {
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : text
+}
+
+function inspectRows(entry: AuditLogEntry): AuditField[] {
   return [
-    ['ts', entry.ts],
-    ['event', entry.event],
-    ['actor', entry.actor],
-    ['actorId', entry.actorId],
-    ['actorCompanyId', entry.actorCompanyId],
-    ['company', entry.companyName],
-    ...Object.entries(entry.detail),
+    { label: 'Who', value: entry.actor ?? 'System' },
+    { label: 'Company', value: entry.companyName ?? 'Platform' },
+    ...(entry.fields ?? []),
   ]
 }
 
@@ -200,7 +200,7 @@ export default function AuditLogPage() {
       serverSort: 'event',
       render: (entry) => (
         <Badge variant="outline" className={cn('font-medium', TONE_CLASS[entry.tone])}>
-          {entry.label}
+          {sentence(entry.label)}
         </Badge>
       ),
     },
@@ -210,7 +210,7 @@ export default function AuditLogPage() {
       width: 'w-40',
       serverSort: 'actor',
       render: (entry) => (
-        <span className="truncate text-sm text-foreground">{entry.actor ?? 'system'}</span>
+        <span className="truncate text-sm text-foreground">{entry.actor ?? 'System'}</span>
       ),
     },
     ...companyColumn,
@@ -233,7 +233,7 @@ export default function AuditLogPage() {
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label={`Inspect the ${entry.event} entry`}
+          aria-label={`Open the ${entry.label} entry`}
           onClick={(event) => {
             event.stopPropagation()
             setInspecting(entry)
@@ -294,7 +294,7 @@ export default function AuditLogPage() {
       <Dialog open={inspecting !== null} onOpenChange={(open) => !open && setInspecting(null)}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>{inspecting?.label}</DialogTitle>
+            <DialogTitle>{inspecting ? sentence(inspecting.label) : ''}</DialogTitle>
             <DialogDescription>
               {inspecting ? new Date(inspecting.ts).toLocaleString() : ''}
             </DialogDescription>
@@ -302,12 +302,13 @@ export default function AuditLogPage() {
 
           {inspecting && (
             <dl className="divide-y divide-border text-sm">
-              {inspectRows(inspecting).map(([key, value]) => (
-                <div key={key} className="flex flex-wrap items-baseline justify-between gap-3 py-2">
-                  <dt className="shrink-0 text-xs text-muted-foreground">{key}</dt>
-                  <dd className="min-w-0 break-all text-right font-medium text-foreground">
-                    {value === null || value === undefined ? '—' : String(value)}
-                  </dd>
+              {inspectRows(inspecting).map((row, index) => (
+                <div
+                  key={`${row.label}-${index}`}
+                  className="flex flex-wrap items-baseline justify-between gap-3 py-2"
+                >
+                  <dt className="shrink-0 text-xs text-muted-foreground">{row.label}</dt>
+                  <dd className="min-w-0 break-words text-right font-medium text-foreground">{row.value}</dd>
                 </div>
               ))}
             </dl>

@@ -35,15 +35,6 @@ const TYPES: Record<DeletedItemType, { label: string; plural: string; icon: Comp
   version: { label: 'Published version', plural: 'Published versions', icon: GitBranch },
 }
 
-const COMES_BACK: Record<DeletedItemType, string> = {
-  user: 'It comes back deactivated, with its role and group memberships. Reactivate it to let them sign in again. An account that never chose a password comes back invited instead.',
-  group: 'It comes back paused, with its members and the contexts shared with it. Resume it to grant that access again.',
-  role: 'It comes back with its permissions. Nobody holds it until you give it to someone.',
-  company: 'It comes back suspended, with the groups, roles and contexts deleted together with it. Its deleted accounts then appear here to be recovered one by one.',
-  context: 'It comes back with its dataset selection, published versions and sharing.',
-  version: 'It is listed with the published versions of its context again.',
-}
-
 const GOES_WITH_IT: Partial<Record<DeletedItemType, string>> = {
   company: 'Everything inside it goes too: its accounts, groups, roles and contexts.',
   context: 'Its dataset selection, facts and every published version go too.',
@@ -162,7 +153,9 @@ export default function DeletedItemsPage() {
           <p className="truncate text-sm">{locationOf(item, platform)}</p>
           {platform && (
             <p className="truncate text-xs text-muted-foreground">
-              {item.type === 'company' ? 'Platform' : (item.companyName ?? 'Platform account')}
+              {item.type === 'company'
+                ? 'Platform'
+                : (item.companyName ?? (item.type === 'user' ? 'Platform account' : 'Platform'))}
             </p>
           )}
         </div>
@@ -298,7 +291,7 @@ export default function DeletedItemsPage() {
             ''
           )
         }
-        consequence={restoring ? COMES_BACK[restoring.type] : undefined}
+        bodyHidden
         confirmLabel="Recover"
         pending={pending}
         onConfirm={() => void confirmRestore()}
@@ -313,7 +306,7 @@ export default function DeletedItemsPage() {
             ? `${TYPES[purging.type].label} deleted from ${locationOf(purging, platform)} by ${deleterOf(purging)} on ${formatDateTime(purging.deletedAt)}. ${GOES_WITH_IT[purging.type] ?? ''}`
             : ''
         }
-        consequence="A permanent delete is final. It is erased from the database and nobody can recover it."
+        bodyHidden
         confirmLabel="Delete permanently"
         destructive
         pending={pending}

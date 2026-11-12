@@ -4,7 +4,10 @@ import { useDeferredValue, useState } from 'react'
 import { Link, useNavigate } from '@/lib/router'
 import {
   ArrowRight,
+  Clock,
   Database,
+  GitBranch,
+  MoreHorizontal,
   Plus,
   RefreshCw,
   Share2,
@@ -20,21 +23,34 @@ import { Pagination } from '@/components/common/Pagination'
 import { SearchBox, SearchToolbar } from '@/components/common/SearchBox'
 import { serverPage } from '@/hooks/usePagination'
 import { notify } from '@/lib/notify'
-import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { ContextQueryProvider } from '@/context/QueryProvider'
 import { useDeleteConnection, useDraftConnections, useVerifyConnection } from '@/hooks/useMetadataLakehouse'
-import { VersionBadge } from '@/components/common/metadata-lakehouse/VersionBadge'
+import {
+  LevelChip,
+  OwnerChip,
+  SharingChip,
+  StatTile,
+  StatusPill,
+  StepProgress,
+} from '@/components/common/metadata-lakehouse/ContextCardParts'
 import { McpDetailsDialog } from '@/components/common/metadata-lakehouse/McpDetailsDialog'
 import { ContextShareDialog } from '@/components/common/metadata-lakehouse/ContextShareDialog'
-import { accessAtLeast, CONTEXT_ACCESS_LABELS } from '@/lib/contextAccess'
+import { accessAtLeast } from '@/lib/contextAccess'
 import {
   PublishedContextsSection,
   type ShareTarget,
 } from '@/components/common/metadata-lakehouse/PublishedContextsSection'
-import { connectorPresentation } from '@/lib/connectors'
-import { formatRelativeTime, maskSecretHint } from '@/lib/format'
+import { ConnectorMark } from '@/components/common/metadata-lakehouse/ConnectorMark'
+import { formatDateTime, formatExact, formatRelativeTime, maskSecretHint } from '@/lib/format'
 import type { DraftConnection, McpTarget } from '@/types/metadataLakehouse'
 
 type LakehouseView = 'drafts' | 'published'
@@ -109,7 +125,7 @@ function DraftsView() {
   }
 
   const newConnection = (
-    <Button onClick={() => navigate(paths.metadataLakehouseBuilder())} disabled={!canCreate}>
+    <Button onClick={() => navigate(paths.metadataLakehouseConnectors)} disabled={!canCreate}>
       <Plus className="size-4" aria-hidden />
       New connection
     </Button>
@@ -200,7 +216,6 @@ function DraftsView() {
         onOpenChange={(open) => !open && setDeleting(null)}
         title={deleting ? `Remove ${deleting.name}?` : ''}
         body="The connection, its dataset selection and its published versions disappear from every list and can no longer be opened."
-        consequence="Nothing in the warehouse is touched, but reconnecting means entering a token again."
         confirmLabel="Remove connection"
         pending={remove.isPending}
         onConfirm={(permanent) => void confirmDelete(permanent)}
@@ -272,121 +287,116 @@ function ConnectionCard({
   const access = connection.access
   const canManage = accessAtLeast(access, 'edit')
   const canDelete = accessAtLeast(access, 'full')
-  const presentation = connectorPresentation(connection.provider)
   const connected = connection.status === 'connected'
   const datasetCount = connection.selectedDatasetCount ?? 0
   const draft = connection.draft
+  const title = draft?.name || connection.name
+  const subtitle = [
+    draft && draft.name !== connection.name ? connection.name : null,
+    connection.host,
+    maskSecretHint(connection.secretHint),
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  const editedAt = draft?.updatedAt ?? null
 
   return (
-    <article className="flex flex-col rounded-xl border bg-card">
-      <div className="flex items-start gap-3 p-4">
-        <span
-          className={cn(
-            'flex size-9 shrink-0 items-center justify-center rounded-md',
-            presentation.accentClass
-          )}
-        >
-          <presentation.icon className="size-4" aria-hidden />
-        </span>
-
+    <article className="group flex flex-col rounded-2xl border bg-card shadow-xs transition-all hover:-translate-y-px hover:border-primary/30 hover:shadow-md">
+      <header className="flex items-start gap-3 p-5 pb-4">
+        <ConnectorMark provider={connection.provider} />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              to={canManage ? builderPath : datasetsPath}
-              className="truncate text-sm font-medium hover:text-primary"
-            >
-              {connection.name}
-            </Link>
-            <Badge
-              variant="outline"
-              className={
-                connected
-                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300'
-                  : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300'
-              }
-            >
-              {connected ? 'Connected' : 'Not working'}
-            </Badge>
-            {access && !access.isOwner && access.level !== 'full' ? (
-              <Badge variant="outline" className="text-muted-foreground">
-                {CONTEXT_ACCESS_LABELS[access.level]}
-              </Badge>
-            ) : null}
-          </div>
-
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">
-            {connection.host} · {maskSecretHint(connection.secretHint)}
-            {access?.owner && !access.isOwner ? ` · owner ${access.owner.name ?? 'unknown'}` : ''}
-          </p>
-
-          {draft ? (
-            <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-              <VersionBadge status="draft" label={draft.label} />
-              <span className="truncate">
-                {draft.name} · edited {formatRelativeTime(draft.updatedAt)}
-              </span>
-            </p>
-          ) : null}
-
-          <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Table2 className="size-3" aria-hidden />
-              <dt className="sr-only">Datasets selected</dt>
-              <dd>
-                {datasetCount > 0
-                  ? `${datasetCount} dataset${datasetCount === 1 ? '' : 's'} selected`
-                  : 'No datasets selected'}
-              </dd>
-            </div>
-            <div>
-              <dt className="sr-only">Last verified</dt>
-              <dd>Verified {formatRelativeTime(connection.lastVerifiedAt)}</dd>
-            </div>
-          </dl>
-
-          {!connected && connection.lastError ? (
-            <p className="mt-1.5 text-xs text-destructive">{connection.lastError}</p>
-          ) : null}
+          <Link
+            to={canManage ? builderPath : datasetsPath}
+            className="block truncate text-base font-semibold tracking-tight hover:text-primary"
+          >
+            {title}
+          </Link>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">{subtitle}</p>
         </div>
+        <StatusPill connected={connected} busy={busy} />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-sm" className="-mt-0.5 -mr-1.5" aria-label={`Options for ${title}`}>
+              <MoreHorizontal aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem asChild>
+              <Link to={datasetsPath}>
+                <Table2 aria-hidden />
+                Datasets
+              </Link>
+            </DropdownMenuItem>
+            {canManage ? (
+              <DropdownMenuItem disabled={busy} onSelect={onVerify}>
+                <RefreshCw aria-hidden />
+                {busy ? 'Checking…' : 'Verify connection'}
+              </DropdownMenuItem>
+            ) : null}
+            {access?.canShare ? (
+              <DropdownMenuItem onSelect={onShare}>
+                <Share2 aria-hidden />
+                Share…
+              </DropdownMenuItem>
+            ) : null}
+            {canDelete ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+                  <Trash2 aria-hidden />
+                  Remove connection
+                </DropdownMenuItem>
+              </>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </header>
+
+      <div className="px-5">
+        {draft ? (
+          <StepProgress step={draft.step} />
+        ) : (
+          <p className="rounded-lg border border-dashed px-3 py-2 text-xs text-muted-foreground">
+            No draft yet. Choose datasets to start building a context.
+          </p>
+        )}
       </div>
 
-      <footer className="mt-auto flex flex-wrap items-center gap-2 border-t px-4 py-2.5">
-        {canManage ? (
-          <Button asChild size="sm">
-            <Link to={builderPath}>
-              {datasetCount > 0 ? 'Continue building' : 'Build context'}
-              <ArrowRight className="size-4" aria-hidden />
-            </Link>
-          </Button>
-        ) : null}
+      <div className="grid grid-cols-3 gap-2 px-5 pt-4">
+        <StatTile icon={Table2} label="Datasets" value={formatExact(datasetCount)} />
+        <StatTile icon={GitBranch} label="Version" value={draft ? `Draft ${draft.label}` : '—'} />
+        <StatTile
+          icon={Clock}
+          label={editedAt ? 'Last edited' : 'Verified'}
+          value={formatRelativeTime(editedAt ?? connection.lastVerifiedAt)}
+          hint={formatDateTime(editedAt ?? connection.lastVerifiedAt)}
+        />
+      </div>
 
-        <Button asChild size="sm" variant={canManage ? 'outline' : 'default'}>
-          <Link to={datasetsPath}>Datasets</Link>
-        </Button>
+      {!connected && connection.lastError ? (
+        <p className="mx-5 mt-3 rounded-lg bg-destructive/5 px-3 py-2 text-xs text-destructive">
+          {connection.lastError}
+        </p>
+      ) : null}
 
-        {canManage ? (
-          <Button size="sm" variant="outline" disabled={busy} onClick={onVerify}>
-            <RefreshCw className={cn('size-4', busy && 'animate-spin')} aria-hidden />
-            {busy ? 'Checking…' : 'Verify'}
-          </Button>
-        ) : null}
-        {access?.canShare ? (
-          <Button size="sm" variant="outline" onClick={onShare}>
-            <Share2 className="size-4" aria-hidden />
-            Share
-          </Button>
-        ) : null}
-        {canDelete ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="ml-auto text-destructive hover:text-destructive"
-            aria-label={`Remove ${connection.name}`}
-            onClick={onDelete}
-          >
-            <Trash2 className="size-4" aria-hidden />
-          </Button>
-        ) : null}
+      <footer className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-t px-5 py-3">
+        <OwnerChip access={access} />
+        <SharingChip access={access} platform={connection.companyId === null} />
+        <LevelChip access={access} />
+        <div className="ml-auto">
+          {canManage ? (
+            <Button asChild size="sm">
+              <Link to={builderPath}>
+                {datasetCount > 0 ? 'Continue building' : 'Build context'}
+                <ArrowRight className="size-4" aria-hidden />
+              </Link>
+            </Button>
+          ) : (
+            <Button asChild size="sm" variant="outline">
+              <Link to={datasetsPath}>View datasets</Link>
+            </Button>
+          )}
+        </div>
       </footer>
     </article>
   )

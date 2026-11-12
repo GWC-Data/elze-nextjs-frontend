@@ -26,6 +26,7 @@ import type {
   ContextAccess,
   ContextAccessLevel,
   ContextProfile,
+  ContextShareCompany,
   ContextShareGroup,
   ContextSharePerson,
   ContextSharing,
@@ -393,49 +394,19 @@ function useStopControl(connectionId: string | null) {
   return { sessionId, setSessionId, stopping, stop, reset }
 }
 
-export function useApplyBusinessContext(connectionId: string | null) {
-  const qc = useQueryClient()
-  const control = useStopControl(connectionId)
-
-  const mutation = useMutation<
-    string,
-    unknown,
-    { sessionId: string; report: string; datasetIds: string[]; request: string }
-  >({
-    mutationFn: async ({ sessionId, report, datasetIds, request }) => {
-      control.setSessionId(sessionId)
-      const reply = await extractionApi.applyBusinessContext(connectionId!, sessionId, request)
-      const combined = extractionApi.withBusinessContextReply(report, reply)
-      await versionsApi.saveExtraction(connectionId!, { sessionId, report: combined, datasetIds }).catch(() => undefined)
-      await prefetchAnalysis(qc, connectionId!)
-      return combined
-    },
-    onSuccess: () => invalidateAnalysis(qc, connectionId),
-    onSettled: control.reset,
-  })
-
-  return {
-    ...mutation,
-    stop: control.stop,
-    stopping: control.stopping,
-    canStop: mutation.isPending && Boolean(control.sessionId) && !control.stopping,
-  }
-}
-
 export function useRunExtraction(connectionId: string | null) {
   const qc = useQueryClient()
   const control = useStopControl(connectionId)
 
-  const mutation = useMutation<
-    ExtractionResult,
-    unknown,
-    { datasetIds: string[]; files?: File[]; businessContext?: string }
-  >({
-    mutationFn: async ({ datasetIds, files, businessContext }) => {
+  const mutation = useMutation<ExtractionResult, unknown, { datasetIds: string[]; files?: File[] }>({
+    mutationFn: async ({ datasetIds, files }) => {
       const state = await versionsApi.fetchVersions(connectionId!)
       const draft = state.draft ?? (await versionsApi.createVersion(connectionId!)).draft
       if (!draft) throw new Error('No draft version to analyse into.')
-      const profile = await connectionsApi.getContextProfile(connectionId!)
+      const [profile, business] = await Promise.all([
+        connectionsApi.getContextProfile(connectionId!),
+        businessLayerApi.getBusinessLayer(connectionId!),
+      ])
 
       const result = await extractionApi.runExtraction(
         connectionId!,
@@ -444,8 +415,8 @@ export function useRunExtraction(connectionId: string | null) {
           contextName: profile?.name || draft.name,
           contextDescription: profile?.description ?? null,
           datasetIds,
+          datasetOverviews: extractionApi.datasetOverviews(business.businessLayer.tables, datasetIds),
           files,
-          businessContext,
         },
         control.setSessionId
       )
@@ -764,6 +735,31 @@ export function useUnshareContextWithGroup(connectionId: string | null) {
   const qc = useQueryClient()
   return useMutation<ContextSharing, unknown, string>({
     mutationFn: (groupId) => accessApi.unshareContextWithGroup(connectionId!, groupId),
+    onSuccess: (sharing) => sharingUpdated(qc, connectionId!, sharing),
+  })
+}
+
+export function useShareableCompanies(connectionId: string | null, enabled = true) {
+  return useQuery<ContextShareCompany[]>({
+    queryKey: [...contextKeys.sharing(connectionId ?? ''), 'companies'],
+    queryFn: () => accessApi.listShareableCompanies(connectionId!),
+    enabled: Boolean(connectionId) && enabled,
+    staleTime: 60_000,
+  })
+}
+
+export function useShareContextWithCompany(connectionId: string | null) {
+  const qc = useQueryClient()
+  return useMutation<ContextSharing, unknown, { companyId: string; level: ContextAccessLevel }>({
+    mutationFn: ({ companyId, level }) => accessApi.shareContextWithCompany(connectionId!, companyId, level),
+    onSuccess: (sharing) => sharingUpdated(qc, connectionId!, sharing),
+  })
+}
+
+export function useUnshareContextWithCompany(connectionId: string | null) {
+  const qc = useQueryClient()
+  return useMutation<ContextSharing, unknown, string>({
+    mutationFn: (companyId) => accessApi.unshareContextWithCompany(connectionId!, companyId),
     onSuccess: (sharing) => sharingUpdated(qc, connectionId!, sharing),
   })
 }

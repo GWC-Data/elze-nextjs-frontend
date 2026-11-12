@@ -9,7 +9,6 @@ import {
   Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Dialog,
@@ -22,12 +21,12 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { errorMessage } from '@/api/client'
-import { useAsync } from '@/hooks/useAsync'
-import { listCompanyOptions } from '@/api/platform.api'
+import { notify } from '@/lib/notify'
 import { useAuth } from '@/context/authContext'
 import { cn } from '@/lib/utils'
 import type { Connector, CreatedConnection } from '@/types/metadataLakehouse'
 import { credentialFields, connectorPresentation } from '@/lib/connectors'
+import { ConnectorMark } from '@/components/common/metadata-lakehouse/ConnectorMark'
 import { DEFAULT_DATASET_LIMIT } from '@/constants/metadataLakehouse'
 import { useCreateConnection } from '@/hooks/useMetadataLakehouse'
 
@@ -47,7 +46,6 @@ export function ConnectionForm({
   const presentation = connectorPresentation(connector.id)
 
   const [values, setValues] = useState<Record<string, string>>({})
-  const [companyId, setCompanyId] = useState('')
   const [phase, setPhase] = useState<Phase>('idle')
   const [failure, setFailure] = useState<string | null>(null)
   const [result, setResult] = useState<CreatedConnection | null>(null)
@@ -55,10 +53,6 @@ export function ConnectionForm({
   const createConnection = useCreateConnection()
 
   const isPlatform = user?.companyId === null
-  const companies = useAsync(
-    () => (isPlatform ? listCompanyOptions() : Promise.resolve([])),
-    [isPlatform]
-  )
 
   const setValue = (id: string, value: string) => {
     setValues((v) => ({ ...v, [id]: value }))
@@ -70,8 +64,7 @@ export function ConnectionForm({
   }
 
   const missing = fields.filter((f) => !values[f.id]?.trim()).map((f) => f.label)
-  const canSubmit =
-    missing.length === 0 && (!isPlatform || companyId !== '') && phase !== 'validating'
+  const canSubmit = missing.length === 0 && phase !== 'validating'
 
   const submit = async () => {
     setPhase('validating')
@@ -83,11 +76,16 @@ export function ConnectionForm({
         host: values.host?.trim() ?? '',
         token: values.token ?? '',
         limit: DEFAULT_DATASET_LIMIT,
-        ...(isPlatform ? { companyId } : {}),
       })
       setValues((v) => ({ ...v, token: '' }))
       setResult(created)
       setPhase('connected')
+      const found = created.datasets.length
+      notify.success(
+        `Connected to ${created.connection.name}.`,
+        `${found}${created.truncated ? '+' : ''} dataset${found === 1 ? '' : 's'} found. Name your context next.`
+      )
+      onConnected(created)
     } catch (err) {
       setPhase('failed')
       setFailure(
@@ -105,14 +103,7 @@ export function ConnectionForm({
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className="gap-0 overflow-hidden p-6 sm:max-w-lg">
         <DialogHeader className="flex-row items-center gap-3.5 space-0 text-left">
-          <span
-            className={cn(
-              'flex size-10 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset ring-black/5 dark:ring-white/10',
-              presentation.accentClass
-            )}
-          >
-            <presentation.icon className="size-5" aria-hidden />
-          </span>
+          <ConnectorMark provider={connector.id} />
           <div className="min-w-0 flex-1">
             <DialogTitle className="text-base font-semibold leading-tight">
               Connect {connector.name}
@@ -125,24 +116,11 @@ export function ConnectionForm({
 
         <div className="max-h-[calc(100vh-15rem)] space-y-6 overflow-y-auto py-6">
           {isPlatform ? (
-            <Field
-              id="cred-company"
-              label="Company"
-              help="A connection belongs to one company. Platform accounts have none of their own."
-            >
-              <Select value={companyId} onValueChange={setCompanyId} disabled={locked}>
-                <SelectTrigger id="cred-company" size="lg" className="w-full">
-                  <SelectValue placeholder="Select a company…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(companies.data ?? []).map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
+            <p className="flex items-start gap-2.5 rounded-lg border border-info/25 bg-info/5 px-3 py-2.5 text-xs leading-relaxed text-foreground">
+              <Info className="mt-0.5 size-4 shrink-0 text-info" aria-hidden />
+              This becomes a platform context. It belongs to no company and stays private to platform
+              accounts until you share it with companies, people or groups.
+            </p>
           ) : null}
 
           {fields.length === 0 ? (

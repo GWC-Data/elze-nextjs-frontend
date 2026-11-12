@@ -15,7 +15,8 @@ export interface AppPaths {
   readonly metadataLakehouse: string
   readonly metadataLakehouseDrafts: string
   readonly metadataLakehousePublished: string
-  metadataLakehouseBuilder(connectionId?: string, versionId?: string): string
+  readonly metadataLakehouseConnectors: string
+  metadataLakehouseBuilder(connectionId?: string, versionId?: string, step?: string): string
   metadataLakehouseConnection(connectionId: string): string
   dataAnalyst(connectionId?: string, sessionId?: string): string
   readonly playbooks: string
@@ -30,6 +31,7 @@ export interface AppPaths {
   readonly users: string
   user(userId: string): string
   readonly groups: string
+  group(groupId: string): string
 
   readonly access: string | null
   readonly roles: string | null
@@ -57,10 +59,11 @@ const PLATFORM: AppPaths = {
   metadataLakehouse: '/platform/metadata-lakehouse',
   metadataLakehouseDrafts: '/platform/metadata-lakehouse/drafts',
   metadataLakehousePublished: '/platform/metadata-lakehouse/published',
-  metadataLakehouseBuilder: (id, versionId) =>
+  metadataLakehouseConnectors: '/platform/metadata-lakehouse/connectors',
+  metadataLakehouseBuilder: (id, versionId, step) =>
     id
       ? `/platform/metadata-lakehouse/builder?connection=${encodeURIComponent(id)}${versionId ? `&version=${encodeURIComponent(versionId)}` : ''
-      }`
+      }${step ? `&step=${encodeURIComponent(step)}` : ''}`
       : '/platform/metadata-lakehouse/builder',
   metadataLakehouseConnection: (id) => `/platform/metadata-lakehouse/connections/${encodeURIComponent(id)}`,
   dataAnalyst: (connectionId, sessionId) =>
@@ -80,6 +83,7 @@ const PLATFORM: AppPaths = {
   users: '/platform/users',
   user: (id) => `/platform/users/${id}`,
   groups: '/platform/groups',
+  group: (id) => `/platform/groups/${id}`,
 
   access: null,
   roles: '/platform/roles',
@@ -107,10 +111,11 @@ const WORKSPACE: AppPaths = {
   metadataLakehouse: '/metadata-lakehouse',
   metadataLakehouseDrafts: '/metadata-lakehouse/drafts',
   metadataLakehousePublished: '/metadata-lakehouse/published',
-  metadataLakehouseBuilder: (id, versionId) =>
+  metadataLakehouseConnectors: '/metadata-lakehouse/connectors',
+  metadataLakehouseBuilder: (id, versionId, step) =>
     id
       ? `/metadata-lakehouse/builder?connection=${encodeURIComponent(id)}${versionId ? `&version=${encodeURIComponent(versionId)}` : ''
-      }`
+      }${step ? `&step=${encodeURIComponent(step)}` : ''}`
       : '/metadata-lakehouse/builder',
   metadataLakehouseConnection: (id) => `/metadata-lakehouse/connections/${encodeURIComponent(id)}`,
   dataAnalyst: (connectionId, sessionId) =>
@@ -130,6 +135,7 @@ const WORKSPACE: AppPaths = {
   users: '/team/users',
   user: (id) => `/team/users/${id}`,
   groups: '/team/groups',
+  group: (id) => `/team/groups/${id}`,
 
   access: '/team/access',
   roles: '/team/roles',

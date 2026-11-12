@@ -24,6 +24,14 @@ export interface Company {
   pendingCount?: number
   features?: FeatureKey[]
   admin?: AdminUser
+  primaryAdmin?: CompanyAdminSummary | null
+}
+
+export interface CompanyAdminSummary {
+  id: string
+  username: string
+  displayName: string | null
+  email: string
 }
 
 export type FeatureKey = 'metadata_lakehouse' | 'data_analyst' | 'agents' | 'dashboards'
@@ -78,6 +86,7 @@ export interface UserListItem {
   displayName?: string
   lastLoginAt?: string
   companyName?: string
+  isDefaultAdmin?: boolean
 }
 
 export interface UserOption {
@@ -204,6 +213,16 @@ export interface Group {
   active: boolean
   createdAt: string | null
   memberCount: number
+  contextCount?: number
+}
+
+export interface GroupMember {
+  id: string
+  username: string
+  email: string
+  displayName: string | null
+  role: RoleName | null
+  status: UserStatus
 }
 
 export interface GroupDetail extends Group {
@@ -282,12 +301,18 @@ export interface AuditLogEntry {
   label: string
   tone: 'danger' | 'warning' | 'success' | 'neutral'
   summary: string
+  fields?: AuditField[]
   detail: Record<string, unknown>
   actor?: string
   actorId?: string
   actorCompanyId?: string
   companyId?: string
   companyName?: string
+}
+
+export interface AuditField {
+  label: string
+  value: string
 }
 
 export type AuditScope = 'all' | 'company' | 'self'

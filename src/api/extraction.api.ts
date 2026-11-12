@@ -28,13 +28,7 @@ export interface ExtractionResult {
   extractedAt?: string | null
   unconfirmed?: boolean
   savedFacts?: number
-  businessContext?: BusinessContextOutcome
 }
-
-export type BusinessContextOutcome =
-  | { status: 'applied' }
-  | { status: 'stopped' }
-  | { status: 'failed'; error: string }
 
 const CLOCK_MARGIN_MS = 5000
 
@@ -52,37 +46,17 @@ export interface ExtractionTarget {
   contextName: string
   contextDescription?: string | null
   datasetIds: string[]
+  datasetOverviews?: Record<string, string>
   files?: File[]
-  businessContext?: string
 }
 
-export function withBusinessContextReply(report: string, reply: string): string {
-  const added = reply.trim()
-  if (!added) return report
-  return [report.trim(), `## Business context\n\n${added}`].filter(Boolean).join('\n\n')
-}
-
-export async function applyBusinessContext(contextId: string, sessionId: string, request: string): Promise<string> {
-  const { success } = await triggerContextLayer(contextId, sessionId, { text: request })
-  if (!success) throw new ExtractionStoppedError()
-  const reply = await fetchExtractionSession(contextId, sessionId).catch(() => null)
-  return reply?.text ?? ''
-}
-
-async function businessContextAfter(
-  contextId: string,
-  sessionId: string,
-  request: string
-): Promise<{ reply: string; outcome: BusinessContextOutcome }> {
-  try {
-    return { reply: await applyBusinessContext(contextId, sessionId, request), outcome: { status: 'applied' } }
-  } catch (err) {
-    if (err instanceof ExtractionStoppedError) return { reply: '', outcome: { status: 'stopped' } }
-    return {
-      reply: '',
-      outcome: { status: 'failed', error: errorMessage(err, 'The agent service did not respond.') },
-    }
+export function datasetOverviews(tables: Record<string, string>, datasetIds: string[]): Record<string, string> {
+  const overviews: Record<string, string> = {}
+  for (const id of datasetIds) {
+    const text = tables[id]?.trim()
+    if (text) overviews[id] = text
   }
+  return overviews
 }
 
 async function uploadFiles(contextId: string, sessionId: string, files: File[]): Promise<string[]> {
@@ -110,6 +84,7 @@ export async function runExtraction(
     contextName: target.contextName,
     contextDescription: target.contextDescription,
     datasetIds: target.datasetIds,
+    datasetOverviews: target.datasetOverviews,
   })
   onSession?.(session.sessionId)
   const startedMs = session.lastUpdateTime ? session.lastUpdateTime * 1000 : Date.now()
@@ -131,19 +106,14 @@ export async function runExtraction(
   }
 
   const report = await fetchExtractionSession(contextId, session.sessionId).catch(() => null)
-  const followUp =
-    target.businessContext && !savedFacts
-      ? await businessContextAfter(contextId, session.sessionId, target.businessContext)
-      : null
 
   return {
     sessionId: session.sessionId,
-    text: withBusinessContextReply(report?.text ?? '', followUp?.reply ?? ''),
+    text: report?.text ?? '',
     toolCalls: [],
     interrupted: false,
     datasetIds: target.datasetIds,
     ...(savedFacts ? { unconfirmed: true, savedFacts } : {}),
-    ...(followUp ? { businessContext: followUp.outcome } : {}),
   }
 }
 

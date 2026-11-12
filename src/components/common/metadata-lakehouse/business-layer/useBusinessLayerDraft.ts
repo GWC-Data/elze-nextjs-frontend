@@ -89,12 +89,6 @@ export function useBusinessLayerDraft(connectionId: string | null, readOnly: boo
 
   const markAnalysed = useCallback(() => setEdited(false), [])
 
-  const touch = useCallback(async (): Promise<boolean> => {
-    if (readOnly) return false
-    dirty.current = true
-    return flush()
-  }, [readOnly, flush])
-
   return {
     query,
     layer,
@@ -105,6 +99,5 @@ export function useBusinessLayerDraft(connectionId: string | null, readOnly: boo
     saveError,
     edited,
     markAnalysed,
-    touch,
   }
 }

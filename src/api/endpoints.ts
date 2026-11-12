@@ -20,7 +20,6 @@ export const endpoints = {
   auth: {
     login: '/auth/login',
     logout: '/auth/logout',
-    sessions: '/auth/sessions',
     changePassword: '/auth/change-password',
     activation: '/auth/activation',
     forgotPassword: '/auth/forgot-password',
@@ -105,6 +104,7 @@ export const endpoints = {
     root: '/groups',
     one: (id: string) => `/groups/${id}`,
     contexts: (id: string) => `/groups/${id}/contexts`,
+    members: (id: string) => `/groups/${id}/members`,
   },
 
   access: {
@@ -152,6 +152,8 @@ export const endpoints = {
     accessUser: (id: string, userId: string) => `${connectionPath(id)}/access/users/${userId}`,
     accessGroups: (id: string) => `${connectionPath(id)}/access/groups`,
     accessGroup: (id: string, groupId: string) => `${connectionPath(id)}/access/groups/${groupId}`,
+    accessCompanies: (id: string) => `${connectionPath(id)}/access/companies`,
+    accessCompany: (id: string, companyId: string) => `${connectionPath(id)}/access/companies/${companyId}`,
   },
 
   adk: {

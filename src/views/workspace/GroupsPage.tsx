@@ -2,34 +2,19 @@
 
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Loader2, Plus, Trash2, UsersRound } from 'lucide-react'
-import {
-  createGroup,
-  deleteGroup,
-  fetchGroup,
-  fetchGroupDashboards,
-  grantGroupAccess,
-  listGroups,
-  listUserOptions,
-  listAccessLevels,
-  revokeGroupAccess,
-  updateGroup,
-} from '@/api/workspace.api'
+import { useNavigate } from '@/lib/router'
+import { Loader2, Plus, UsersRound } from 'lucide-react'
+import { createGroup, listGroups } from '@/api/workspace.api'
 import { listCompanyOptions } from '@/api/platform.api'
 import { useAsync } from '@/hooks/useAsync'
+import { usePaths } from '@/hooks/usePaths'
 import { useAuth } from '@/context/authContext'
 import { Page, PageHeader, Section } from '@/components/common/Page'
-import { AccessLevelBadge } from '@/components/common/Badges'
-import { GrantActionsMenu } from '@/components/common/GrantActionsMenu'
-import { ACCESS_LEVEL_LABELS } from '@/constants/labels'
-import { ChipSelect } from '@/components/common/ChipSelect'
-import { DeleteConfirmDialog } from '@/components/common/ConfirmDialog'
+import { DataTable, type ColumnDef } from '@/components/common/DataTable'
 import { TextField } from '@/components/common/Fields'
-import { GrantPicker } from '@/components/common/people/GrantPicker'
-import { GroupContexts } from '@/components/common/groups/GroupContexts'
-import { SHOW_ANALYTICS } from '@/constants/sections'
-import { EmptyState, ErrorState, InlineLoading, TableSkeleton } from '@/components/common/States'
+import { GroupAvatar, GroupStatusPill } from '@/components/common/groups/GroupParts'
 import { notify } from '@/lib/notify'
+import { formatExact } from '@/lib/format'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -40,431 +25,175 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
-import { cn } from '@/lib/utils'
-import type { AccessLevel } from '@/types/auth'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { Group } from '@/types/admin'
+
+const ALL = '__all__'
+
+function formatDate(iso: string | null): string {
+  if (!iso) return '—'
+  const date = new Date(iso)
+  return Number.isNaN(date.getTime())
+    ? '—'
+    : date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+}
 
 export default function GroupsPage() {
   const { can, user: me } = useAuth()
+  const paths = usePaths()
+  const navigate = useNavigate()
   const isPlatform = me?.companyId === null
 
   const groups = useAsync(() => listGroups(), [])
   const [creating, setCreating] = useState(false)
-  const [deleting, setDeleting] = useState<Group | null>(null)
-  const [deletePending, setDeletePending] = useState(false)
+  const [companyFilter, setCompanyFilter] = useState(ALL)
+  const [statusFilter, setStatusFilter] = useState(ALL)
 
-  const rows = groups.data ?? []
+  const all = groups.data ?? []
+  const companies = [...new Map(all.map((g) => [g.companyId, g.companyName])).entries()].sort((a, b) =>
+    a[1].localeCompare(b[1])
+  )
+  const rows = all.filter(
+    (g) =>
+      (companyFilter === ALL || g.companyId === companyFilter) &&
+      (statusFilter === ALL || (statusFilter === 'active') === g.active)
+  )
 
-  const [picked, setPicked] = useState<string | null>(null)
-  const selectedId =
-    picked !== null && rows.some((group) => group.id === picked) ? picked : (rows[0]?.id ?? null)
-  const selectedGroup = rows.find((group) => group.id === selectedId) ?? null
+  const columns: ColumnDef<Group>[] = [
+    {
+      key: 'name',
+      header: 'Group',
+      sortValue: (g) => g.name.toLowerCase(),
+      render: (g) => (
+        <div className="flex min-w-0 items-center gap-3">
+          <GroupAvatar name={g.name} />
+          <span className="truncate font-medium text-foreground">{g.name}</span>
+        </div>
+      ),
+    },
+    ...(isPlatform
+      ? [
+          {
+            key: 'company',
+            header: 'Company',
+            secondary: true,
+            sortValue: (g: Group) => g.companyName.toLowerCase(),
+            render: (g: Group) => <span className="truncate text-sm text-muted-foreground">{g.companyName}</span>,
+          } satisfies ColumnDef<Group>,
+        ]
+      : []),
+    {
+      key: 'members',
+      header: 'Members',
+      align: 'right',
+      width: 'w-28',
+      sortValue: (g) => g.memberCount,
+      render: (g) => <span className="tabular-nums">{formatExact(g.memberCount)}</span>,
+    },
+    {
+      key: 'contexts',
+      header: 'Shared contexts',
+      align: 'right',
+      width: 'w-36',
+      secondary: true,
+      sortValue: (g) => g.contextCount ?? 0,
+      render: (g) => <span className="tabular-nums">{formatExact(g.contextCount ?? 0)}</span>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      width: 'w-28',
+      sortValue: (g) => (g.active ? 0 : 1),
+      render: (g) => <GroupStatusPill active={g.active} />,
+    },
+    {
+      key: 'created',
+      header: 'Created',
+      width: 'w-36',
+      secondary: true,
+      sortValue: (g) => g.createdAt ?? '',
+      render: (g) => <span className="text-sm text-muted-foreground">{formatDate(g.createdAt)}</span>,
+    },
+  ]
 
-  const confirmDelete = async (permanent: boolean) => {
-    if (!deleting) return
-    setDeletePending(true)
-    try {
-      await deleteGroup(deleting.id, { permanent })
-      notify.success(
-        `${deleting.name} was ${permanent ? 'permanently deleted' : 'deleted'}.`,
-        'The access it carried went with it.'
-      )
-      setPicked(null)
-      groups.reload()
-      setDeleting(null)
-    } catch (err) {
-      notify.failure('delete that group', err)
-    } finally {
-      setDeletePending(false)
-    }
-  }
-
+  const newGroup = can('group.create') ? (
+    <Button onClick={() => setCreating(true)}>
+      <Plus aria-hidden />
+      New group
+    </Button>
+  ) : undefined
 
   return (
     <Page>
       <PageHeader
         title="Groups"
-        description="Share published contexts with a whole team at once. Everyone active in a group gets what the group has."
-        actions={
-          can('group.create') && (
-            <Button onClick={() => setCreating(true)}>
-              <Plus aria-hidden />
-              New group
-            </Button>
-          )
-        }
+        description="Teams of people who share the same contexts. Open a group to manage its members and what it can see."
+        actions={newGroup}
       />
 
-      {groups.error ? (
-        <Section>
-          <ErrorState error={groups.error} title="Unable to load groups" onRetry={groups.reload} />
-        </Section>
-      ) : groups.loading ? (
-        <Section flush>
-          <TableSkeleton rows={4} columns={3} />
-        </Section>
-      ) : rows.length === 0 ? (
-        <Section flush>
-          <EmptyState
-            title="No groups yet"
-            body="A group is the tidiest way to share the same contexts with a whole team: add people once, and share once."
-            icon={UsersRound}
-            action={
-              can('group.create') && (
-                <Button onClick={() => setCreating(true)}>
-                  <Plus aria-hidden />
-                  Create a group
-                </Button>
-              )
-            }
-          />
-        </Section>
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">
-          <Section title="Groups" flush>
-            <ul className="divide-y divide-border" role="listbox" aria-label="Groups">
-              {rows.map((group) => {
-                const active = group.id === selectedId
-                return (
-                  <li key={group.id}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={active}
-                      onClick={() => setPicked(group.id)}
-                      className={cn(
-                        'w-full px-4 py-3 text-left transition-colors',
-                        'focus-visible:outline-ring focus-visible:outline-2 focus-visible:-outline-offset-2',
-                        active ? 'bg-accent' : 'hover:bg-muted/50'
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          'block truncate text-sm',
-                          active ? 'font-medium text-accent-foreground' : 'text-foreground'
-                        )}
-                      >
-                        {group.name}
-                      </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'}
-                        {isPlatform && group.companyName ? ` · ${group.companyName}` : ''}
-                        {group.active ? '' : ' · paused'}
-                      </span>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          </Section>
-
-          {selectedId !== null && (
-            <div className="space-y-6">
-              <GroupEditor
-                key={selectedId}
-                groupId={selectedId}
-                onChanged={groups.reload}
-                onDelete={() => {
-                  const group = rows.find((row) => row.id === selectedId)
-                  if (group) setDeleting(group)
-                }}
-              />
-              {selectedGroup && can('context.read') ? (
-                <GroupContexts key={selectedGroup.id} group={selectedGroup} />
+      <Section flush>
+        <DataTable
+          data={groups.error ? null : groups.data ? rows : null}
+          columns={columns}
+          keyOf={(g) => g.id}
+          loading={groups.loading}
+          error={groups.error}
+          onRetry={groups.reload}
+          onRowClick={(g) => navigate(paths.group(g.id))}
+          searchPlaceholder={isPlatform ? 'Search groups or companies…' : 'Search groups…'}
+          searchFilter={(g, query) => `${g.name} ${g.companyName}`.toLowerCase().includes(query.toLowerCase())}
+          toolbar={
+            <>
+              {isPlatform && companies.length > 1 ? (
+                <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                  <SelectTrigger size="lg" className="w-44" aria-label="Filter by company">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>All companies</SelectItem>
+                    {companies.map(([id, name]) => (
+                      <SelectItem key={id} value={id}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ) : null}
-              {SHOW_ANALYTICS && <GroupAccess groupId={selectedId} />}
-            </div>
-          )}
-        </div>
-      )}
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger size="lg" className="w-36" aria-label="Filter by status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>All statuses</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="paused">Paused</SelectItem>
+                </SelectContent>
+              </Select>
+            </>
+          }
+          empty={
+            all.length === 0
+              ? {
+                  title: 'No groups yet',
+                  body: 'Create a group, add people to it once, and share contexts with all of them at the same time.',
+                  action: newGroup,
+                }
+              : { title: 'No matching groups', body: 'Nothing matches these filters.' }
+          }
+        />
+      </Section>
 
-      {creating && (
+      {creating ? (
         <CreateGroupDialog
           isPlatform={isPlatform}
           onClose={() => setCreating(false)}
           onCreated={(id) => {
             setCreating(false)
-            setPicked(id)
-            groups.reload()
+            navigate(paths.group(id))
           }}
         />
-      )}
-
-      <DeleteConfirmDialog
-        open={deleting !== null}
-        onOpenChange={(open) => !open && setDeleting(null)}
-        title={deleting ? `Delete ${deleting.name}?` : ''}
-        body="The group is removed from every list and grants nothing any more. Its name can be used again."
-        consequence={
-          deleting && deleting.memberCount > 0
-            ? `${deleting.memberCount} ${deleting.memberCount === 1 ? 'person' : 'people'} will lose any access they had only through this group.`
-            : undefined
-        }
-        confirmLabel="Delete group"
-        pending={deletePending}
-        onConfirm={(permanent) => void confirmDelete(permanent)}
-      />
+      ) : null}
     </Page>
-  )
-}
-
-function GroupEditor({
-  groupId,
-  onChanged,
-  onDelete,
-}: {
-  groupId: string
-  onChanged: () => void
-  onDelete: () => void
-}) {
-  const { can } = useAuth()
-  const editable = can('group.update')
-
-  const group = useAsync(() => fetchGroup(groupId), [groupId])
-  const people = useAsync(() => listUserOptions(), [])
-
-  type Draft = { name: string; active: boolean; memberIds: string[] }
-  const [draft, setDraft] = useState<Draft | null>(null)
-  const [pending, setPending] = useState(false)
-
-  const asSaved: Draft = {
-    name: group.data?.name ?? '',
-    active: group.data?.active ?? true,
-    memberIds: group.data?.userIds ?? [],
-  }
-  const { name, active, memberIds } = draft ?? asSaved
-
-  const edit = (change: Partial<Draft>) =>
-    setDraft((current) => ({ ...(current ?? asSaved), ...change }))
-
-  const save = async () => {
-    setPending(true)
-    try {
-      await updateGroup(groupId, { name: name.trim(), active, userIds: memberIds })
-      setDraft(null)
-      notify.success('Group saved.')
-      group.reload()
-      onChanged()
-    } catch (err) {
-      notify.failure('save this group', err)
-    } finally {
-      setPending(false)
-    }
-  }
-
-  if (group.error) {
-    return (
-      <Section title="Group">
-        <ErrorState error={group.error} onRetry={group.reload} compact />
-      </Section>
-    )
-  }
-
-  if (group.loading || !group.data) {
-    return (
-      <Section title="Group" flush>
-        <InlineLoading label="Loading the group…" />
-      </Section>
-    )
-  }
-
-  return (
-    <Section
-      title="Group"
-      description="A paused group keeps its access but stops passing it on to members."
-      actions={
-        <>
-          {editable && (
-            <Button size="sm" onClick={() => void save()} disabled={pending}>
-              {pending && <Loader2 className="animate-spin" aria-hidden />}
-              Save
-            </Button>
-          )}
-          {can('group.delete') && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-destructive hover:text-destructive"
-              onClick={onDelete}
-            >
-              <Trash2 aria-hidden />
-              Delete
-            </Button>
-          )}
-        </>
-      }
-    >
-      <div className="grid gap-5 sm:grid-cols-2">
-        <TextField
-          label="Name"
-          value={name}
-          onChange={(value) => edit({ name: value })}
-          disabled={!editable || pending}
-          required
-        />
-        <div className="flex items-start justify-between gap-4 self-end rounded-lg border border-border p-3">
-          <div className="min-w-0">
-            <Label htmlFor={`group-active-${groupId}`} className="text-sm font-medium">
-              Active
-            </Label>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Pausing withholds this group&rsquo;s access without deleting it.
-            </p>
-          </div>
-          <Switch
-            id={`group-active-${groupId}`}
-            checked={active}
-            disabled={!editable || pending}
-            onCheckedChange={(value) => edit({ active: value })}
-          />
-        </div>
-      </div>
-
-      <div className="mt-5">
-        <p className="mb-2 text-xs font-medium text-foreground">Members</p>
-        {people.error ? (
-          <ErrorState error={people.error} onRetry={people.reload} compact />
-        ) : people.loading ? (
-          <InlineLoading label="Loading colleagues…" />
-        ) : (
-          <ChipSelect
-            options={people.data ?? []}
-            selected={memberIds}
-            onToggle={(person) =>
-              edit({
-                memberIds: memberIds.includes(person.id)
-                  ? memberIds.filter((id) => id !== person.id)
-                  : [...memberIds, person.id],
-              })
-            }
-            keyOf={(person) => person.id}
-            labelOf={(person) => person.username}
-            disabled={!editable || pending}
-            emptyMessage="There is nobody to add yet."
-          />
-        )}
-      </div>
-    </Section>
-  )
-}
-
-function GroupAccess({ groupId }: { groupId: string }) {
-  const { can } = useAuth()
-  const mayGrant = can('access.grant')
-  const mayRevoke = can('access.revoke')
-
-  const access = useAsync(() => fetchGroupDashboards(groupId), [groupId])
-  const [pending, setPending] = useState(false)
-
-  const grant = async (dashboardId: string, level: AccessLevel) => {
-    setPending(true)
-    try {
-      await grantGroupAccess(dashboardId, groupId, level)
-      notify.success('Access given to the group.', 'Every active member has it now.')
-      access.reload()
-    } catch (err) {
-      notify.failure('give that access', err)
-      throw err
-    } finally {
-      setPending(false)
-    }
-  }
-
-  const levels = useAsync(() => listAccessLevels(), [])
-  const [pendingId, setPendingId] = useState<string | null>(null)
-
-  const revoke = async (dashboardId: string, title: string) => {
-    setPendingId(dashboardId)
-    try {
-      await revokeGroupAccess(dashboardId, groupId)
-      notify.success(`The group no longer has ${title}.`)
-      access.reload()
-    } catch (err) {
-      notify.failure('remove that access', err)
-    } finally {
-      setPendingId(null)
-    }
-  }
-
-  const changeLevel = async (dashboardId: string, title: string, level: AccessLevel) => {
-    setPendingId(dashboardId)
-    try {
-      await grantGroupAccess(dashboardId, groupId, level)
-      notify.success(
-        `The group now ${ACCESS_LEVEL_LABELS[level].toLowerCase()} ${title}.`,
-        'Every active member has the new level.'
-      )
-      access.reload()
-    } catch (err) {
-      notify.failure('change that permission', err)
-    } finally {
-      setPendingId(null)
-    }
-  }
-
-  const held = access.data?.held ?? []
-
-  return (
-    <Section
-      title="Dashboard access"
-      description="Reaches every active member of this group."
-      flush
-    >
-      {mayGrant && (
-        <GrantPicker
-          dashboards={access.data?.available ?? []}
-          disabled={pending}
-          onGrant={grant}
-        />
-      )}
-
-      {access.error ? (
-        <ErrorState error={access.error} title="Unable to load access" onRetry={access.reload} compact />
-      ) : access.loading ? (
-        <InlineLoading label="Loading access…" />
-      ) : held.length === 0 ? (
-        <EmptyState
-          title="This group has no dashboards"
-          body={mayGrant ? 'Give it one above and every member gets it at once.' : undefined}
-          compact
-        />
-      ) : (
-        <ul className="divide-y divide-border">
-          {held.map((dashboard) => {
-            const title = dashboard.title || dashboard.id
-            return (
-              <li
-                key={dashboard.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-5 py-3"
-              >
-                <span className="min-w-0 truncate text-sm font-medium text-foreground">{title}</span>
-                <span className="flex items-center gap-2">
-                  <AccessLevelBadge level={dashboard.level} />
-                  <GrantActionsMenu
-                    holderName="this group"
-                    level={dashboard.level}
-                    levels={levels.data ?? undefined}
-                    mayChange={mayGrant}
-                    mayRemove={mayRevoke}
-                    pending={pendingId === dashboard.id}
-                    onChangeLevel={(level) => void changeLevel(dashboard.id, title, level)}
-                    onRemove={() => void revoke(dashboard.id, title)}
-                  />
-                </span>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </Section>
   )
 }
 
@@ -497,7 +226,7 @@ function CreateGroupDialog({
         name: name.trim(),
         companyId: isPlatform ? companyId : undefined,
       })
-      notify.success(`${group.name} was created.`, 'Add members and give it access next.')
+      notify.success(`${group.name} was created.`, 'Add members and share contexts with it next.')
       onCreated(group.id)
     } catch (err) {
       notify.failure('create that group', err)
@@ -508,11 +237,12 @@ function CreateGroupDialog({
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+        <DialogHeader className="flex-row items-center gap-3 text-left">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <UsersRound className="size-5" aria-hidden />
+          </span>
           <DialogTitle>New group</DialogTitle>
-          <DialogDescription>
-            Members and shared contexts are set once it exists.
-          </DialogDescription>
+          <DialogDescription className="sr-only">Name the group and choose its company.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-4" noValidate>
@@ -526,7 +256,7 @@ function CreateGroupDialog({
             required
           />
 
-          {isPlatform && (
+          {isPlatform ? (
             <div className="space-y-1.5">
               <Label htmlFor="new-group-company" className="text-xs font-medium">
                 Company
@@ -546,7 +276,7 @@ function CreateGroupDialog({
                 </SelectContent>
               </Select>
             </div>
-          )}
+          ) : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
