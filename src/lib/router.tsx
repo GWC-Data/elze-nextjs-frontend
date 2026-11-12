@@ -23,6 +23,7 @@ const pathOf = (href: string) => href.split(/[?#]/)[0]
 export interface NavigateOptions {
   replace?: boolean
   state?: unknown
+  shallow?: boolean
 }
 
 export function useNavigate() {
@@ -36,6 +37,11 @@ export function useNavigate() {
       }
       const href = toHref(to)
       if (options?.state !== undefined) navState.set(pathOf(href), options.state)
+      if (options?.shallow) {
+        if (options.replace) window.history.replaceState(null, '', href)
+        else window.history.pushState(null, '', href)
+        return
+      }
       if (options?.replace) router.replace(href)
       else router.push(href)
     },

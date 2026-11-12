@@ -110,7 +110,10 @@ export default function DataAnalystPage() {
                 },
               }
             : {}
-        )
+        ).then((created) => {
+          setOpened({ sessionId: created.sessionId, context })
+          return created
+        })
       }}
       sendMessage={(sid, text, artifactIds) => sendAdkMessage(activeId, AGENT, sid, { text, artifactIds })}
       interrupt={(sid) => interruptAdkSession(activeId, AGENT, sid)}
