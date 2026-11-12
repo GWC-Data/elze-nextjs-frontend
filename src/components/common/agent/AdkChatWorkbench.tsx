@@ -120,7 +120,9 @@ export function AdkChatWorkbench({
   const messageRef = React.useRef<HTMLTextAreaElement>(null)
   const endRef = React.useRef<HTMLDivElement>(null)
 
-  const viewKey = sessionId ?? "new"
+  const [createdKey, setCreatedKey] = React.useState<string | null>(null)
+  if (createdKey !== null && createdKey === sessionId) setCreatedKey(null)
+  const viewKey = sessionId ?? createdKey ?? "new"
   const history = useAsync(() => (sessionId ? loadSession(sessionId) : Promise.resolve(null)), [sessionId])
   const historyTurns = React.useMemo<Turn[]>(() => {
     if (!history.data) return []
@@ -178,7 +180,8 @@ export function AdkChatWorkbench({
         activeSession = created.sessionId
         key = created.sessionId
         setLocal((prev) => (prev ? { key, items: prev.items } : prev))
-        navigate(basePath(activeSession, created.contextId), { replace: true })
+        setCreatedKey(key)
+        navigate(basePath(activeSession, created.contextId), { replace: true, shallow: true })
       } catch {
         setIsSending(false)
         setLocal((prev) => (prev && prev.key === viewKey ? { key, items: base } : prev))
@@ -261,7 +264,7 @@ export function AdkChatWorkbench({
       if (!activeSession) {
         const created = await createSession()
         activeSession = created.sessionId
-        navigate(basePath(activeSession, created.contextId), { replace: true })
+        navigate(basePath(activeSession, created.contextId), { replace: true, shallow: true })
       }
       const artifact = await uploadFile(activeSession, file)
       setAttachments((prev) => [...prev, artifact])
