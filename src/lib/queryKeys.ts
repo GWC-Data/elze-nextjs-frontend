@@ -50,3 +50,9 @@ export const contextKeys = {
   publishSummary: (connectionId: string) =>
     [...contextKeys.publish(connectionId), 'summary'] as const,
 }
+
+export const mcpKeys = {
+  all: ['mcp'] as const,
+  tokens: () => [...mcpKeys.all, 'tokens'] as const,
+  access: (connectionId: string, name: string) => [...mcpKeys.all, 'access', connectionId, name] as const,
+}
