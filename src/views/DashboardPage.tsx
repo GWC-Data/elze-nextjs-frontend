@@ -20,6 +20,8 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { HydratedDashboardView, CardDefinition, Selections } from '@/types/dashboard'
 
+const FOCUS_REFRESH_MS = 5 * 60_000
+
 export default function DashboardPage() {
   const { dashboardId = '' } = useParams()
 
@@ -42,7 +44,12 @@ function DashboardView({ dashboardId }: { dashboardId: string }) {
   const [sharing, setSharing] = useState(false)
 
   useEffect(() => {
-    const onFocus = () => void refresh().catch(() => {})
+    let last = Date.now()
+    const onFocus = () => {
+      if (Date.now() - last < FOCUS_REFRESH_MS) return
+      last = Date.now()
+      void refresh().catch(() => {})
+    }
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
   }, [refresh])

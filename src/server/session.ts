@@ -14,6 +14,7 @@ export interface SignedInSession {
   dashboards: AccessibleDashboard[]
   permissions: ReadonlySet<string>
   features: ReadonlySet<string>
+  accessExpiresAt: number | null
 }
 
 export type ServerSession = SignedInSession | { kind: 'renewable' } | { kind: 'signed-out' }
@@ -22,6 +23,17 @@ interface BackendProfile {
   state: SignedInSession['state']
   user: AuthUser & { permissions?: string[]; features?: string[] }
   dashboards?: AccessibleDashboard[]
+}
+
+function expiryOf(token: string): number | null {
+  const payload = token.split('.')[1]
+  if (!payload) return null
+  try {
+    const { exp } = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { exp?: unknown }
+    return typeof exp === 'number' ? exp * 1000 : null
+  } catch {
+    return null
+  }
 }
 
 async function loadSession(): Promise<ServerSession> {
@@ -53,6 +65,7 @@ async function loadSession(): Promise<ServerSession> {
     dashboards: body.data.dashboards ?? [],
     permissions: new Set(permissions),
     features: new Set(features),
+    accessExpiresAt: expiryOf(access),
   }
 }
 
@@ -60,7 +73,17 @@ export const getSession = cache(loadSession)
 
 export function toClientSession(session: ServerSession): ClientSession {
   if (session.kind === 'signed-in') {
-    return { status: session.state, user: session.user, dashboards: session.dashboards }
+    return {
+      status: session.state,
+      user: session.user,
+      dashboards: session.dashboards,
+      accessExpiresAt: session.accessExpiresAt,
+    }
   }
-  return { status: session.kind === 'renewable' ? 'RESTORING' : 'UNAUTHENTICATED', user: null, dashboards: [] }
+  return {
+    status: session.kind === 'renewable' ? 'RESTORING' : 'UNAUTHENTICATED',
+    user: null,
+    dashboards: [],
+    accessExpiresAt: null,
+  }
 }
