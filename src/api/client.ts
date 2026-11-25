@@ -96,17 +96,50 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 })
 
 const REFRESH_LOCK = 'da-session-refresh'
+const EXPIRY_KEY = 'da-session-expires-at'
 
 let refreshInFlight: Promise<boolean> | null = null
+let accessExpiresAt = 0
+
+function storedExpiry(): number {
+  try {
+    return Number(window.localStorage.getItem(EXPIRY_KEY)) || 0
+  } catch {
+    return 0
+  }
+}
+
+function storeExpiry(at: number): boolean {
+  try {
+    window.localStorage.setItem(EXPIRY_KEY, String(at))
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function noteAccessExpiry(at: number | null | undefined): void {
+  if (!at || !Number.isFinite(at)) return
+  accessExpiresAt = at
+  storeExpiry(at)
+}
+
+export function msUntilAccessExpiry(): number | null {
+  const at = Math.max(accessExpiresAt, storedExpiry())
+  return at > 0 ? at - Date.now() : null
+}
 
 async function requestRefresh(token: string): Promise<boolean> {
   try {
-    const res = await axios.post<SuccessEnvelope<unknown>>(
+    const res = await axios.post<SuccessEnvelope<{ expiresIn?: unknown }>>(
       '/api/auth/refresh',
       undefined,
       { headers: { 'X-CSRF-Token': token }, withCredentials: true }
     )
-    return res.data?.success === true
+    if (res.data?.success !== true) return false
+    const seconds = res.data.data?.expiresIn
+    if (typeof seconds === 'number') noteAccessExpiry(Date.now() + seconds * 1000)
+    return true
   } catch {
     return false
   }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { restoreSession, setSessionLostHandler } from '@/api/client'
+import { noteAccessExpiry, restoreSession, setSessionLostHandler } from '@/api/client'
 import { login as loginRequest, logout as logoutRequest } from '@/api/auth.api'
 import { notify } from '@/lib/notify'
 import { homeForRole } from '@/router/paths'
@@ -73,6 +73,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(
     async (identifier: string, password: string) => {
       const session = await loginRequest(identifier, password)
+      noteAccessExpiry(Date.now() + session.expiresIn * 1000)
       setLost(null)
       router.replace(homeForRole(session.user.role))
     },

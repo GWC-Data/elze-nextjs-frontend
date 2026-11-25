@@ -51,6 +51,7 @@ export interface ClientSession {
   status: 'AUTHENTICATED' | 'PASSWORD_CHANGE_REQUIRED' | 'RESTORING' | 'UNAUTHENTICATED'
   user: AuthUser | null
   dashboards: AccessibleDashboard[]
+  accessExpiresAt: number | null
 }
 
 export interface ActivationTarget {
