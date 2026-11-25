@@ -154,6 +154,12 @@ export const endpoints = {
     accessGroup: (id: string, groupId: string) => `${connectionPath(id)}/access/groups/${groupId}`,
     accessCompanies: (id: string) => `${connectionPath(id)}/access/companies`,
     accessCompany: (id: string, companyId: string) => `${connectionPath(id)}/access/companies/${companyId}`,
+    mcp: (id: string) => `${connectionPath(id)}/mcp`,
+  },
+
+  mcp: {
+    tokens: '/mcp/tokens',
+    token: (id: string) => `/mcp/tokens/${enc(id)}`,
   },
 
   adk: {
